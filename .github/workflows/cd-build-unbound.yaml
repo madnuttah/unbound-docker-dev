@@ -1,4 +1,4 @@
-name: CD Build Distroless Unbound
+name: CD Build Unbound
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
     paths:
       - "versions/**"
       - "unbound/**"
-      - ".github/workflows/cd-build-unbound-unified.yaml"
+      - ".github/workflows/cd-build-unbound.yaml"
   schedule:
     - cron: "0 19 * * mon-fri"
 
@@ -190,7 +190,10 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/s390x,linux/riscv64
           builder: ${{ steps.buildx.outputs.name }}
           file: ${{ matrix.variant == 'canary-quic' && './unbound/canary_quic.Dockerfile' || './unbound/canary.Dockerfile' }}
-          push: true
+         
+#######!!! ######
+          push: false
+####################
           sbom: true
           provenance: true
           build-args: |
