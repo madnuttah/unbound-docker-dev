@@ -1,0 +1,208 @@
+name: CD Build Distroless Unbound
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "versions/**"
+      - "unbound/**"
+      - ".github/workflows/cd-build-unbound-unified.yaml"
+  schedule:
+    - cron: "0 19 * * mon-fri"
+
+permissions: {}
+
+env:
+  DOCKERHUB_SLUG: "madnuttah/unbound"
+
+jobs:
+  # ---------------------------------------------------------
+  # Release build vars (standard + quic)
+  # ---------------------------------------------------------
+  release-vars:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      IMAGE_BUILD_DATE: ${{ steps.date.outputs.IMAGE_BUILD_DATE }}
+      UNBOUND_VERSION: ${{ steps.versions.outputs.UNBOUND_VERSION }}
+      UNBOUND_SHA256: ${{ steps.versions.outputs.UNBOUND_SHA256 }}
+      OPENSSL_BUILDENV_VERSION: ${{ steps.versions.outputs.OPENSSL_BUILDENV_VERSION }}
+      OPENSSL_QUIC_BUILDENV_VERSION: ${{ steps.versions.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+      UNBOUND_DOCKER_IMAGE_VERSION: ${{ steps.versions.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: date
+        run: echo "IMAGE_BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
+      - id: versions
+        run: |
+          UNBOUND_VERSION="$(cat versions/unbound.txt)"
+          UNBOUND_SHA256="$(cat versions/unbound-sha256.txt)"
+          OPENSSL_BUILDENV_VERSION="$(cat versions/openssl.txt)"
+          OPENSSL_QUIC_BUILDENV_VERSION="$(cat versions/openssl-quic.txt)"
+
+          if [ -z "$UNBOUND_VERSION" ] || [ -z "$UNBOUND_SHA256" ]; then
+            echo "Missing unbound version or sha256" >&2
+            exit 1
+          fi
+
+          UNBOUND_DOCKER_IMAGE_VERSION="${UNBOUND_VERSION}-0"
+
+          {
+            echo "UNBOUND_VERSION=$UNBOUND_VERSION"
+            echo "UNBOUND_SHA256=$UNBOUND_SHA256"
+            echo "OPENSSL_BUILDENV_VERSION=$OPENSSL_BUILDENV_VERSION"
+            echo "OPENSSL_QUIC_BUILDENV_VERSION=$OPENSSL_QUIC_BUILDENV_VERSION"
+            echo "UNBOUND_DOCKER_IMAGE_VERSION=$UNBOUND_DOCKER_IMAGE_VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------
+  # Release builds (standard + quic)
+  # ---------------------------------------------------------
+  release-build:
+    needs: release-vars
+    if: needs.release-vars.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [standard, quic]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+
+      - id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push (multi-arch)
+        uses: docker/build-push-action@v6
+        env:
+          VARIANT: ${{ matrix.variant }}
+        with:
+          platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/s390x,linux/riscv64
+          builder: ${{ steps.buildx.outputs.name }}
+          file: ${{ matrix.variant == 'quic' && './unbound/release_quic.Dockerfile' || './unbound/release.Dockerfile' }}
+          push: true
+          sbom: true
+          provenance: true
+          build-args: |
+            IMAGE_BUILD_DATE=${{ needs.release-vars.outputs.IMAGE_BUILD_DATE }}
+            UNBOUND_VERSION=${{ needs.release-vars.outputs.UNBOUND_VERSION }}
+            UNBOUND_SHA256=${{ needs.release-vars.outputs.UNBOUND_SHA256 }}
+            UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.release-vars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
+            OPENSSL_BUILDENV_VERSION=${{ needs.release-vars.outputs.OPENSSL_BUILDENV_VERSION }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.release-vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+          cache-from: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ matrix.variant }}
+          cache-to: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ matrix.variant }},mode=max
+          tags: |
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.release-vars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}${{ matrix.variant == 'quic' && '-quic' || '' }}
+            ${{ env.DOCKERHUB_SLUG }}:${{ matrix.variant == 'quic' && 'latest-quic' || 'latest' }}
+
+  # ---------------------------------------------------------
+  # Canary builds (canary + canary-quic)
+  # ---------------------------------------------------------
+  canary-build:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [canary, canary-quic]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # -----------------------------------------------------
+      # Check if Unbound HEAD changed
+      # -----------------------------------------------------
+      - name: Check Unbound HEAD
+        id: headcheck
+        run: |
+          LATEST_SHA=$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | awk '{print $1}')
+          echo "LATEST_SHA=$LATEST_SHA" >> $GITHUB_OUTPUT
+
+          LAST_SHA=$(docker manifest inspect madnuttah/unbound:canary \
+            | jq -r '.annotations."org.opencontainers.image.revision" // empty')
+
+          if [ "$LATEST_SHA" = "$LAST_SHA" ]; then
+            echo "NO_CHANGE=true" >> $GITHUB_OUTPUT
+          else
+            echo "NO_CHANGE=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Skip if no change
+      - name: Skip build if unchanged
+        if: steps.headcheck.outputs.NO_CHANGE == 'true' && github.event_name == 'schedule'
+        run: echo "No changes in Unbound HEAD — skipping canary build."
+
+      # -----------------------------------------------------
+      # Build only if HEAD changed OR manual/push trigger
+      # -----------------------------------------------------
+      - name: Continue only if changed
+        if: steps.headcheck.outputs.NO_CHANGE == 'false' || github.event_name != 'schedule'
+        run: echo "Proceeding with canary build."
+
+      - name: Set vars
+        id: vars
+        if: steps.headcheck.outputs.NO_CHANGE == 'false' || github.event_name != 'schedule'
+        run: |
+          IMAGE_BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          OPENSSL_BUILDENV_VERSION="$(cat versions/openssl.txt)"
+          OPENSSL_QUIC_BUILDENV_VERSION="$(cat versions/openssl-quic.txt)"
+
+          {
+            echo "IMAGE_BUILD_DATE=$IMAGE_BUILD_DATE"
+            echo "OPENSSL_BUILDENV_VERSION=$OPENSSL_BUILDENV_VERSION"
+            echo "OPENSSL_QUIC_BUILDENV_VERSION=$OPENSSL_QUIC_BUILDENV_VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+        if: steps.headcheck.outputs.NO_CHANGE == 'false' || github.event_name != 'schedule'
+
+      - id: buildx
+        uses: docker/setup-buildx-action@v3
+        if: steps.headcheck.outputs.NO_CHANGE == 'false' || github.event_name != 'schedule'
+
+      - uses: docker/login-action@v3
+        if: steps.headcheck.outputs.NO_CHANGE == 'false' || github.event_name != 'schedule'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push canary (multi-arch)
+        if: steps.headcheck.outputs.NO_CHANGE == 'false' || github.event_name != 'schedule'
+        uses: docker/build-push-action@v6
+        env:
+          VARIANT: ${{ matrix.variant }}
+        with:
+          platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/s390x,linux/riscv64
+          builder: ${{ steps.buildx.outputs.name }}
+          file: ${{ matrix.variant == 'canary-quic' && './unbound/canary_quic.Dockerfile' || './unbound/canary.Dockerfile' }}
+          push: true
+          sbom: true
+          provenance: true
+          build-args: |
+            IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
+            OPENSSL_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+            UNBOUND_REVISION=${{ steps.headcheck.outputs.LATEST_SHA }}
+          cache-from: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ matrix.variant }}
+          cache-to: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ matrix.variant }},mode=max
+          tags: |
+            ${{ env.DOCKERHUB_SLUG }}:${{ matrix.variant }}
+          labels: |
+            org.opencontainers.image.revision=${{ steps.headcheck.outputs.LATEST_SHA }}

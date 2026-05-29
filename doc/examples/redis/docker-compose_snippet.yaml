@@ -1,0 +1,33 @@
+### Put the following at the end of your docker compose *services:* section ###
+
+  redis-socket:
+    image: busybox
+    container_name: redis-socket
+    init: true
+    tty: true
+    command:
+      - /bin/sh
+      - -c
+      - |
+        chown -R 999:1000 /usr/local/unbound/cachedb.d/ # Change group (:1000) to your used GID
+        /bin/sh
+    volumes:
+       - cachedb.d:/usr/local/unbound/cachedb.d/
+      
+  redis:
+    container_name: unbound-db
+    image: redis:alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - /.../unbound-db/healthcheck.sh:/usr/local/sbin/healthcheck.sh:ro
+      - cachedb.d:/usr/local/unbound/cachedb.d/
+    healthcheck:
+      test: /usr/local/sbin/healthcheck.sh
+      interval: 10s
+      retries: 5
+      start_period: 5s
+      timeout: 30s
+
+volumes:
+  cachedb.d:
