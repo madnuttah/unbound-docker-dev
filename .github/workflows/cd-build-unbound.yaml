@@ -9,7 +9,7 @@ on:
     inputs:
       subversion:
         description: "Manual subversion number (required for manual runs)"
-        required: false
+        required: true
         type: string
 
 permissions:
