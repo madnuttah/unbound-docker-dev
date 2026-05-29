@@ -73,7 +73,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
+        uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
@@ -125,7 +125,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
+        uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
@@ -156,7 +156,6 @@ jobs:
         with:
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/${{ matrix.arch }}
-
           file: ${{ matrix.variant == 'quic' && 'unbound/release_quic.Dockerfile' || 'unbound/release.Dockerfile' }}
 
           build-args: |
@@ -164,8 +163,8 @@ jobs:
             UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
             UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
             UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
-            OPENSSL_BUILDENV_VERSION=${{ matrix.variant == 'standard' && needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION || '' }}
-            OPENSSL_QUIC_BUILDENV_VERSION=${{ matrix.variant == 'quic' && needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION || '' }}
+            OPENSSL_BUILDENV_VERSION=${{ matrix.variant == 'standard' && needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION || 'none' }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ matrix.variant == 'quic' && needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION || 'none' }}
 
           cache-from: |
             type=registry,ref=madnuttah/unbound:buildcache-${{ matrix.variant }}-${{ matrix.arch }}
