@@ -16,7 +16,50 @@ on:
 permissions: {}
 
 jobs:
+
+  update-sha-start:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Import GPG key
+        id: IMPORT_GPG
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Fetch latest upstream HEAD
+        id: fetch
+        run: |
+          UNBOUND_GIT_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)"
+          echo "UNBOUND_GIT_SHA=$UNBOUND_GIT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Push updated unbound_git_sha (start)
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          NEW_SHA: ${{ steps.fetch.outputs.UNBOUND_GIT_SHA }}
+        run: |
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
+          echo "$NEW_SHA" > unbound_git_sha
+          git add unbound_git_sha
+          git commit -m "Updated unbound_git_sha (release start)" || true
+          git push origin main || true
+
+
   buildvars:
+    needs: update-sha-start
     runs-on: ubuntu-latest
     outputs:
       IMAGE_BUILD_DATE: ${{ steps.date.outputs.IMAGE_BUILD_DATE }}
@@ -62,6 +105,7 @@ jobs:
             echo "OPENSSL_QUIC_BUILDENV_VERSION=$OPENSSL_QUIC_BUILDENV_VERSION"
             echo "UNBOUND_DOCKER_IMAGE_VERSION=$UNBOUND_DOCKER_IMAGE_VERSION"
           } >> $GITHUB_OUTPUT
+
 
   build:
     needs: buildvars
