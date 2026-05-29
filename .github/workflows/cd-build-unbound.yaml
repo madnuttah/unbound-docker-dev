@@ -2,14 +2,22 @@ name: CD Build Unbound
 
 on:
   workflow_dispatch:
+    inputs:
+      subversion:
+        description: "Manual subversion bump"
+        required: false
+        type: string
+
   push:
     branches: [ main ]
     paths:
       - "versions/**"
+
   schedule:
     - cron: "0 19 * * mon-fri"
 
-permissions: {}
+permissions:
+  contents: read
 
 env:
   DOCKERHUB_SLUG: "madnuttah/unbound"
@@ -28,12 +36,12 @@ jobs:
       OPENSSL_BUILDENV_VERSION: ${{ steps.versions.outputs.OPENSSL_BUILDENV_VERSION }}
       OPENSSL_QUIC_BUILDENV_VERSION: ${{ steps.versions.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
       UNBOUND_DOCKER_IMAGE_VERSION: ${{ steps.versions.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
-      
+
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
+
       - id: date
         run: echo "IMAGE_BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
@@ -49,7 +57,14 @@ jobs:
             exit 1
           fi
 
-          UNBOUND_DOCKER_IMAGE_VERSION="${UNBOUND_VERSION}-0"
+          # Manual subversion logic (ossl-be style)
+          if [ -n "${{ github.event.inputs.subversion }}" ]; then
+            N="${{ github.event.inputs.subversion }}"
+          else
+            N="0"
+          fi
+
+          UNBOUND_DOCKER_IMAGE_VERSION="${UNBOUND_VERSION}-${N}"
 
           {
             echo "UNBOUND_VERSION=$UNBOUND_VERSION"
@@ -58,6 +73,18 @@ jobs:
             echo "OPENSSL_QUIC_BUILDENV_VERSION=$OPENSSL_QUIC_BUILDENV_VERSION"
             echo "UNBOUND_DOCKER_IMAGE_VERSION=$UNBOUND_DOCKER_IMAGE_VERSION"
           } >> "$GITHUB_OUTPUT"
+
+      # Save subversion artifact (optional)
+      - name: Save subversion artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.subversion != '' }}
+        run: echo "${{ github.event.inputs.subversion }}" > subversion.txt
+
+      - name: Upload subversion artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.subversion != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: subversion
+          path: subversion.txt
 
   # ---------------------------------------------------------
   # Release builds (standard + quic)
@@ -77,9 +104,7 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
 
-
       - uses: docker/setup-qemu-action@v3
-
       - id: buildx
         uses: docker/setup-buildx-action@v3
 
@@ -131,9 +156,6 @@ jobs:
           ref: ${{ github.ref }}
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
 
-      # -----------------------------------------------------
-      # Check if Unbound HEAD changed
-      # -----------------------------------------------------
       - name: Check Unbound HEAD
         id: headcheck
         run: |
@@ -149,14 +171,10 @@ jobs:
             echo "NO_CHANGE=false" >> $GITHUB_OUTPUT
           fi
 
-      # Skip if no change
       - name: Skip build if unchanged
         if: steps.headcheck.outputs.NO_CHANGE == 'true' && github.event_name == 'schedule'
         run: echo "No changes in Unbound HEAD — skipping canary build."
 
-      # -----------------------------------------------------
-      # Build only if HEAD changed OR manual/push trigger
-      # -----------------------------------------------------
       - name: Continue only if changed
         if: steps.headcheck.outputs.NO_CHANGE == 'false' || github.event_name != 'schedule'
         run: echo "Proceeding with canary build."
@@ -197,10 +215,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/s390x,linux/riscv64
           builder: ${{ steps.buildx.outputs.name }}
           file: ${{ matrix.variant == 'canary-quic' && './unbound/canary_quic.Dockerfile' || './unbound/canary.Dockerfile' }}
-         
-#######!!! ######
           push: false
-####################
           sbom: true
           provenance: true
           build-args: |
