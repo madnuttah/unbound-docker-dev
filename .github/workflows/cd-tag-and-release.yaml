@@ -26,19 +26,19 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
+        uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
       - name: Checkout source
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
           fetch-depth: 0
 
       - name: Import GPG key
         id: IMPORT_GPG
-        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd
+        uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
@@ -46,7 +46,6 @@ jobs:
           git_commit_gpgsign: true
           git_tag_gpgsign: true
           git_push_gpgsign: false
-          trust_level: 5
 
       - name: Download subversion artifact (if exists)
         uses: actions/download-artifact@v4
@@ -57,28 +56,21 @@ jobs:
       - name: Determine subversion
         id: SUBV
         run: |
-          # Manual run: subversion MUST be provided
+          # Manual run → subversion is mandatory
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -z "${{ github.event.inputs.subversion }}" ]; then
-              echo "ERROR: Manual runs require a non-empty subversion number."
-              exit 1
-            fi
-            echo "Using manual subversion: ${{ github.event.inputs.subversion }}"
-            echo "N=${{ github.event.inputs.subversion }}" >> "$GITHUB_OUTPUT"
+            echo "N=${{ github.event.inputs.subversion }}" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # workflow_run: use artifact if available
+          # Artifact from Testdrive
           if [ -f subversion.txt ]; then
             N="$(cat subversion.txt)"
-            echo "Using artifact subversion: $N"
-            echo "N=$N" >> "$GITHUB_OUTPUT"
+            echo "N=$N" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # fallback for automated builds
-          echo "No subversion provided or artifact found, defaulting to 0"
-          echo "N=0" >> "$GITHUB_OUTPUT"
+          # Fallback
+          echo "N=0" >> $GITHUB_OUTPUT
 
       - name: Push tag and upload release to GitHub
         env:
@@ -99,6 +91,7 @@ jobs:
           TAG="${UNBOUND_VER}-${N}"
 
           git fetch --prune origin --tags
+
           if git rev-parse "refs/tags/v${TAG}" >/dev/null 2>&1; then
             echo "Tag v${TAG} already exists."
             exit 1
@@ -109,12 +102,9 @@ jobs:
           RELEASE_NOTES="## v${TAG} - $(date -u +"%Y-%m-%d")\n"
           RELEASE_NOTES+="## What's Changed?\n"
           RELEASE_NOTES+="* Updated Unbound build\n\n"
-
           RELEASE_NOTES+="Unbound: ${UNBOUND_VER}\n\n"
-
           RELEASE_NOTES+="## Unbound Release Notes\n"
           RELEASE_NOTES+="https://github.com/NLnetLabs/unbound/releases/tag/release-${UNBOUND_VER}\n\n"
-
           RELEASE_NOTES+="## Contributors\n"
 
           git log "${PREV_TAG}..HEAD" --format="%aN|%aE" \
