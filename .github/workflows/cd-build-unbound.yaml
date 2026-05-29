@@ -27,7 +27,6 @@ jobs:
   # Release build vars (standard + quic)
   # ---------------------------------------------------------
   release-vars:
-    # FIX: Always run for workflow_dispatch + push (release builds)
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
@@ -58,7 +57,6 @@ jobs:
             exit 1
           fi
 
-          # Manual subversion logic (ossl-be style)
           if [ -n "${{ github.event.inputs.subversion }}" ]; then
             N="${{ github.event.inputs.subversion }}"
           else
@@ -75,7 +73,6 @@ jobs:
             echo "UNBOUND_DOCKER_IMAGE_VERSION=$UNBOUND_DOCKER_IMAGE_VERSION"
           } >> "$GITHUB_OUTPUT"
 
-      # Save subversion artifact (for Tag workflow)
       - name: Save subversion artifact
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.subversion != '' }}
         run: echo "${{ github.event.inputs.subversion }}" > subversion.txt
@@ -137,8 +134,8 @@ jobs:
           cache-to: |
             type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ matrix.variant }},mode=max
           tags: |
-            ${{ env.DOCKERHUB_SLUG }}:${{ needs.release-vars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}${{ matrix.variant == 'quic' && '-quic' || '' }}
-            ${{ env.DOCKERHUB_SLUG }}:${{ matrix.variant == 'quic' && 'latest-quic' || 'latest' }}
+            "${{ env.DOCKERHUB_SLUG }}:${{ needs.release-vars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}${{ matrix.variant == 'quic' && '-quic' || '' }}"
+            "${{ env.DOCKERHUB_SLUG }}:${{ matrix.variant == 'quic' && 'latest-quic' || 'latest' }}"
 
   # ---------------------------------------------------------
   # Canary builds (unchanged)
@@ -229,6 +226,6 @@ jobs:
           cache-to: |
             type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ matrix.variant }},mode=max
           tags: |
-            ${{ env.DOCKERHUB_SLUG }}:${{ matrix.variant }}
+            "${{ env.DOCKERHUB_SLUG }}:${{ matrix.variant }}"
           labels: |
             org.opencontainers.image.revision=${{ steps.headcheck.outputs.LATEST_SHA }}
