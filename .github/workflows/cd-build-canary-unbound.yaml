@@ -152,7 +152,7 @@ jobs:
           cache-to: |
             type=registry,ref=madnuttah/unbound:buildcache-canary-${{ matrix.variant }}-${{ matrix.arch }},mode=max
 
-          push: true
+          push: false
           sbom: true
           provenance: true
 
