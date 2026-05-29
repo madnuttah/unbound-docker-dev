@@ -2,7 +2,7 @@ name: CD Tag And Release
 
 on:
   workflow_run:
-    workflows: ["CD Build Unbound"]
+    workflows: ["CD Testdrive Unbound Docker Images"]
     types: [completed]
 
   workflow_dispatch:
