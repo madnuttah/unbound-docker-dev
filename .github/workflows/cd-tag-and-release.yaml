@@ -4,10 +4,11 @@ on:
   workflow_run:
     workflows: ["CD Build Unbound"]
     types: [completed]
+
   workflow_dispatch:
     inputs:
       subversion:
-        description: "Manual subversion number (optional)"
+        description: "Manual subversion number (required for manual runs)"
         required: false
         type: string
 
@@ -56,18 +57,28 @@ jobs:
       - name: Determine subversion
         id: SUBV
         run: |
-          if [ -n "${{ github.event.inputs.subversion }}" ]; then
+          # Manual run: subversion MUST be provided
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -z "${{ github.event.inputs.subversion }}" ]; then
+              echo "ERROR: Manual runs require a non-empty subversion number."
+              exit 1
+            fi
             echo "Using manual subversion: ${{ github.event.inputs.subversion }}"
-            N="${{ github.event.inputs.subversion }}"
-          elif [ -f subversion.txt ]; then
-            echo "Using artifact subversion: $(cat subversion.txt)"
-            N="$(cat subversion.txt)"
-          else
-            echo "No subversion provided or artifact found, defaulting to 0"
-            N="0"
+            echo "N=${{ github.event.inputs.subversion }}" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-          echo "N=$N" >> "$GITHUB_OUTPUT"
+          # workflow_run: use artifact if available
+          if [ -f subversion.txt ]; then
+            N="$(cat subversion.txt)"
+            echo "Using artifact subversion: $N"
+            echo "N=$N" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # fallback for automated builds
+          echo "No subversion provided or artifact found, defaulting to 0"
+          echo "N=0" >> "$GITHUB_OUTPUT"
 
       - name: Push tag and upload release to GitHub
         env:
