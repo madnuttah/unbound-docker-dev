@@ -1,4 +1,4 @@
-name: CD Build Canary Distroless Unbound (Matrix)
+name: CD Build Canary Unbound
 
 on:
   schedule:
