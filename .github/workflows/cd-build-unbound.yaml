@@ -156,7 +156,7 @@ jobs:
         with:
           context: .
           builder: ${{ steps.buildx.outputs.name }}
-          platforms: linux/${{ matrix.arch }}
+          platforms: ${{ matrix.arch == 'armv6' && 'linux/arm/v6' || matrix.arch == 'armv7' && 'linux/arm/v7' || 'linux/' + matrix.arch }}
           file: ${{ matrix.variant == 'quic' && 'unbound/release_quic.Dockerfile' || 'unbound/release.Dockerfile' }}
 
           build-args: |
