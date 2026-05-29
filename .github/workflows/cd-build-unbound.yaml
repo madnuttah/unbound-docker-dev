@@ -29,7 +29,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Import GPG key
         id: IMPORT_GPG
@@ -46,7 +48,7 @@ jobs:
           UNBOUND_GIT_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)"
           echo "UNBOUND_GIT_SHA=$UNBOUND_GIT_SHA" >> $GITHUB_OUTPUT
 
-      - name: Push updated unbound_git_sha (start)
+      - name: Push updated unbound_git_sha
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           NEW_SHA: ${{ steps.fetch.outputs.UNBOUND_GIT_SHA }}
@@ -77,6 +79,10 @@ jobs:
 
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Set IMAGE_BUILD_DATE
         id: date
@@ -125,6 +131,10 @@ jobs:
 
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
