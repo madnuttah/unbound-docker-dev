@@ -24,7 +24,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Check for update
         id: check
@@ -56,7 +58,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Import GPG key
         id: IMPORT_GPG
@@ -101,7 +105,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Set buildvars
         id: vars
