@@ -31,11 +31,9 @@ jobs:
       - name: Check for update
         id: check
         run: |
-          # Fetch upstream HEAD
           UNBOUND_GIT_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)"
           echo "UNBOUND_GIT_SHA=$UNBOUND_GIT_SHA" >> $GITHUB_OUTPUT
 
-          # Read last stored SHA
           CURRENT_SHA="$(cat unbound_git_sha 2>/dev/null || echo '')"
 
           if [[ "$CURRENT_SHA" = "$UNBOUND_GIT_SHA" ]]; then
@@ -91,7 +89,7 @@ jobs:
       fail-fast: false
       matrix:
         variant: [standard, quic]
-        arch: [amd64, arm64, 386, arm/v6, arm/v7, ppc64le, s390x, riscv64]
+        arch: [amd64, arm64, 386, armv6, armv7, ppc64le, s390x, riscv64]
 
     env:
       DOCKERHUB_SLUG: "madnuttah/unbound"
@@ -136,7 +134,7 @@ jobs:
         with:
           context: .
           builder: ${{ steps.buildx.outputs.name }}
-          platforms: linux/${{ matrix.arch }}
+          platforms: ${{ matrix.arch == 'armv6' && 'linux/arm/v6' || matrix.arch == 'armv7' && 'linux/arm/v7' || 'linux/' + matrix.arch }}
 
           file: ${{ matrix.variant == 'quic' && 'unbound/canary_quic.Dockerfile' || 'unbound/canary.Dockerfile' }}
 
