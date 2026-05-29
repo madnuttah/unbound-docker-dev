@@ -1,0 +1,153 @@
+name: CD Build Canary Distroless Unbound (Matrix)
+
+on:
+  schedule:
+    - cron: "0 19 * * mon-fri"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+
+  check-update:
+    runs-on: ubuntu-latest
+    outputs:
+      UNBOUND_GIT_SHA: ${{ steps.check.outputs.UNBOUND_GIT_SHA }}
+      changed: ${{ steps.check.outputs.changed }}
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check for update
+        id: check
+        run: |
+          # Fetch upstream HEAD
+          UNBOUND_GIT_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)"
+          echo "UNBOUND_GIT_SHA=$UNBOUND_GIT_SHA" >> $GITHUB_OUTPUT
+
+          # Read last stored SHA
+          CURRENT_SHA="$(cat unbound_git_sha 2>/dev/null || echo '')"
+
+          if [[ "$CURRENT_SHA" = "$UNBOUND_GIT_SHA" ]]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+  update-sha:
+    needs: check-update
+    if: needs.check-update.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Import GPG key
+        id: IMPORT_GPG
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Push updated unbound_git_sha
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          NEW_SHA: ${{ needs.check-update.outputs.UNBOUND_GIT_SHA }}
+        run: |
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
+          echo "$NEW_SHA" > unbound_git_sha
+          git add unbound_git_sha
+          git commit -m "Updated unbound_git_sha" || true
+          git push origin main || true
+
+  build:
+    needs: [check-update, update-sha]
+    if: needs.check-update.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [standard, quic]
+        arch: [amd64, arm64, 386, arm/v6, arm/v7, ppc64le, s390x, riscv64]
+
+    env:
+      DOCKERHUB_SLUG: "madnuttah/unbound"
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set buildvars
+        id: vars
+        run: |
+          echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+          echo "UNBOUND_VERSION=$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure | awk -F= '/^version=/ { print $2 }')" >> $GITHUB_OUTPUT
+          source buildvars
+          echo "OPENSSL_BUILDENV_VERSION=$OPENSSL_BUILDENV_VERSION" >> $GITHUB_OUTPUT
+          echo "OPENSSL_QUIC_BUILDENV_VERSION=$OPENSSL_QUIC_BUILDENV_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Canary image
+        uses: docker/build-push-action@v6
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          platforms: linux/${{ matrix.arch }}
+
+          file: ${{ matrix.variant == 'quic' && 'unbound/canary_quic.Dockerfile' || 'unbound/canary.Dockerfile' }}
+
+          build-args: |
+            IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
+            UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}
+            OPENSSL_BUILDENV_VERSION=${{ matrix.variant == 'standard' && steps.vars.outputs.OPENSSL_BUILDENV_VERSION || '' }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ matrix.variant == 'quic' && steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION || '' }}
+
+          cache-from: |
+            type=registry,ref=madnuttah/unbound:buildcache-canary-${{ matrix.variant }}-${{ matrix.arch }}
+
+          cache-to: |
+            type=registry,ref=madnuttah/unbound:buildcache-canary-${{ matrix.variant }}-${{ matrix.arch }},mode=max
+
+          push: true
+          sbom: true
+          provenance: true
+
+          tags: |
+            madnuttah/unbound:${{ matrix.variant == 'quic' && 'canary-quic' || 'canary' }}
