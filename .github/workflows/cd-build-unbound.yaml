@@ -154,6 +154,7 @@ jobs:
         env:
           DOCKERHUB_SLUG: "madnuttah/unbound"
         with:
+          context: .
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/${{ matrix.arch }}
           file: ${{ matrix.variant == 'quic' && 'unbound/release_quic.Dockerfile' || 'unbound/release.Dockerfile' }}
