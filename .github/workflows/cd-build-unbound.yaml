@@ -164,8 +164,8 @@ jobs:
             UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
             UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
             UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
-            OPENSSL_BUILDENV_VERSION=${{ matrix.variant == 'standard' && needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION || 'none' }}
-            OPENSSL_QUIC_BUILDENV_VERSION=${{ matrix.variant == 'quic' && needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION || 'none' }}
+            OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
             type=registry,ref=madnuttah/unbound:buildcache-${{ matrix.variant }}-${{ matrix.arch }}
