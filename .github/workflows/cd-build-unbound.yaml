@@ -27,6 +27,7 @@ jobs:
   # Release build vars (standard + quic)
   # ---------------------------------------------------------
   release-vars:
+    # FIX: Always run for workflow_dispatch + push (release builds)
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
@@ -74,7 +75,7 @@ jobs:
             echo "UNBOUND_DOCKER_IMAGE_VERSION=$UNBOUND_DOCKER_IMAGE_VERSION"
           } >> "$GITHUB_OUTPUT"
 
-      # Save subversion artifact (optional)
+      # Save subversion artifact (for Tag workflow)
       - name: Save subversion artifact
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.subversion != '' }}
         run: echo "${{ github.event.inputs.subversion }}" > subversion.txt
@@ -140,7 +141,7 @@ jobs:
             ${{ env.DOCKERHUB_SLUG }}:${{ matrix.variant == 'quic' && 'latest-quic' || 'latest' }}
 
   # ---------------------------------------------------------
-  # Canary builds (canary + canary-quic)
+  # Canary builds (unchanged)
   # ---------------------------------------------------------
   canary-build:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
