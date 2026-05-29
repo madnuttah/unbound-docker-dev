@@ -2,13 +2,8 @@ name: CD Testdrive Unbound Docker Images
 
 on:
   workflow_run:
-    workflows:
-      - "CD Build Canary Distroless Unbound Docker Image"
-      - "CD Build Canary Distroless Unbound QUIC Docker Image"
-      - "CD Build Distroless Unbound Docker Image"
-      - "CD Build Distroless Unbound QUIC Docker Image"
-    types:
-      - completed
+    workflows: ["CD Build Unbound"]
+    types: [completed]
 
 permissions:
   actions: read
@@ -25,25 +20,28 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Determine image tag
+      - name: Determine image tag from matrix job
         id: tag
         env:
-          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          TITLE: ${{ github.event.workflow_run.display_title }}
         run: |
-          case "$WORKFLOW_NAME" in
-            "CD Build Canary Distroless Unbound Docker Image")
+          echo "Workflow title: $TITLE"
+
+          case "$TITLE" in
+            *"canary-build (canary)"*)
               echo "IMAGE_TAG=madnuttah/unbound:canary" >> "$GITHUB_ENV"
               ;;
-            "CD Build Canary Distroless Unbound QUIC Docker Image")
+            *"canary-build (canary-quic)"*)
               echo "IMAGE_TAG=madnuttah/unbound:canary-quic" >> "$GITHUB_ENV"
               ;;
-            "CD Build Distroless Unbound QUIC Docker Image")
-              echo "IMAGE_TAG=madnuttah/unbound:latest-quic" >> "$GITHUB_ENV"
-              ;;
-            "CD Build Distroless Unbound Docker Image")
+            *"release-build (standard)"*)
               echo "IMAGE_TAG=madnuttah/unbound:latest" >> "$GITHUB_ENV"
               ;;
+            *"release-build (quic)"*)
+              echo "IMAGE_TAG=madnuttah/unbound:latest-quic" >> "$GITHUB_ENV"
+              ;;
             *)
+              echo "Unknown matrix variant: $TITLE"
               exit 1
               ;;
           esac
