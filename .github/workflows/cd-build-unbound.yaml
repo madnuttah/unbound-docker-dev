@@ -28,10 +28,12 @@ jobs:
       OPENSSL_BUILDENV_VERSION: ${{ steps.versions.outputs.OPENSSL_BUILDENV_VERSION }}
       OPENSSL_QUIC_BUILDENV_VERSION: ${{ steps.versions.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
       UNBOUND_DOCKER_IMAGE_VERSION: ${{ steps.versions.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
-
+      
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          ref: ${{ github.ref }}
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
       - id: date
         run: echo "IMAGE_BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
 
