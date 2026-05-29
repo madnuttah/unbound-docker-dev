@@ -134,6 +134,7 @@ jobs:
       - name: Build and push Canary image
         uses: docker/build-push-action@v6
         with:
+          context: .
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/${{ matrix.arch }}
 
