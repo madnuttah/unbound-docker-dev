@@ -61,7 +61,7 @@ jobs:
 
 
   buildvars:
-    needs: update-sha-start
+    needs: update-git-sha
     runs-on: ubuntu-latest
     outputs:
       IMAGE_BUILD_DATE: ${{ steps.date.outputs.IMAGE_BUILD_DATE }}
