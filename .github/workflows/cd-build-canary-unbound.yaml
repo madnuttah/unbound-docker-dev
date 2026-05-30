@@ -79,7 +79,6 @@ jobs:
           git add versions/unbound-git-sha.txt
           git commit -m "Updated unbound_git_sha (canary)" || true
           git push origin main || true
-
   build:
     needs: [check-update, update-sha]
     if: needs.check-update.outputs.changed == 'true'
@@ -164,12 +163,12 @@ jobs:
             OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
-            type=registry,ref=madnuttah/unbound-dev:${{ steps.meta.outputs.CACHE_KEY }}
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }}
 
           cache-to: |
-            type=registry,ref=madnuttah/unbound-dev:${{ steps.meta.outputs.CACHE_KEY }},mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }},mode=max
 
           push: true
 
           tags: |
-            madnuttah/unbound-dev:${{ steps.meta.outputs.TAG }}
+            ${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.TAG }}
