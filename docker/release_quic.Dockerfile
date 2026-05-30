@@ -4,7 +4,7 @@
 ARG BUILD_MODE=release
 ARG QUIC=true
 
-FROM docker/base.Dockerfile AS base
+FROM base AS base
 
 # --- release_quic.Dockerfile (TEIL 2) ---
 ARG UNBOUND_VERSION

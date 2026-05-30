@@ -4,7 +4,7 @@
 ARG BUILD_MODE=canary
 ARG QUIC=false
 
-FROM docker/base.Dockerfile AS base
+FROM base AS base
 
 # --- canary.Dockerfile (TEIL 2) ---
 ARG UNBOUND_VERSION

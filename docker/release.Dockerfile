@@ -4,7 +4,7 @@
 ARG BUILD_MODE=release
 ARG QUIC=false
 
-FROM docker/base.Dockerfile AS base
+FROM base AS base
 
 # --- release.Dockerfile (TEIL 2) ---
 # Release‑spezifische Build‑Args
