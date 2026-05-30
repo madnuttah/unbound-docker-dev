@@ -140,7 +140,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f
         env:
-          DOCKERHUB_SLUG: "***/unbound"
+          DOCKERHUB_SLUG: "madnuttah/unbound-dev"
         with:
           platforms: |
             linux/amd64,linux/arm64,linux/386,
@@ -161,10 +161,10 @@ jobs:
             OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
-            type=registry,ref=***/unbound:${{ steps.meta.outputs.CACHE_KEY }}
+            type=registry,ref=madnuttah/unbound-dev:${{ steps.meta.outputs.CACHE_KEY }}
           cache-to: |
-            type=registry,ref=***/unbound:${{ steps.meta.outputs.CACHE_KEY }},mode=max
+            type=registry,ref=madnuttah/unbound-dev:${{ steps.meta.outputs.CACHE_KEY }},mode=max
 
           tags: |
-            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}${{ steps.meta.outputs.TAG_SUFFIX }}-test
-            ${{ env.DOCKERHUB_SLUG }}:latest${{ steps.meta.outputs.TAG_SUFFIX }}-test
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}${{ steps.meta.outputs.TAG_SUFFIX }}
+            ${{ env.DOCKERHUB_SLUG }}:latest${{ steps.meta.outputs.TAG_SUFFIX }}

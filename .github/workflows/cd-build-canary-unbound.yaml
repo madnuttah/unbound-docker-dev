@@ -90,7 +90,7 @@ jobs:
         variant: [release, quic]
 
     env:
-      DOCKERHUB_SLUG: "madnuttah/unbound"
+      DOCKERHUB_SLUG: "madnuttah/unbound-dev"
 
     steps:
       - name: Harden Runner
@@ -164,12 +164,12 @@ jobs:
             OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
-            type=registry,ref=madnuttah/unbound:${{ steps.meta.outputs.CACHE_KEY }}
+            type=registry,ref=madnuttah/unbound-dev:${{ steps.meta.outputs.CACHE_KEY }}
 
           cache-to: |
-            type=registry,ref=madnuttah/unbound:${{ steps.meta.outputs.CACHE_KEY }},mode=max
+            type=registry,ref=madnuttah/unbound-dev:${{ steps.meta.outputs.CACHE_KEY }},mode=max
 
           push: true
 
           tags: |
-            madnuttah/unbound:${{ steps.meta.outputs.TAG }}
+            madnuttah/unbound-dev:${{ steps.meta.outputs.TAG }}
