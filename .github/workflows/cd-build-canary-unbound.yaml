@@ -79,6 +79,7 @@ jobs:
           git add versions/unbound-git-sha.txt
           git commit -m "Updated unbound_git_sha (canary)" || true
           git push origin main || true
+
   build:
     needs: [check-update, update-sha]
     if: needs.check-update.outputs.changed == 'true'

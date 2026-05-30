@@ -51,6 +51,7 @@ jobs:
           done
 
           echo "ALL_BUILDS_OK=true" >> "$GITHUB_ENV"
+
   test-images:
     needs: preflight
     runs-on: ubuntu-latest
