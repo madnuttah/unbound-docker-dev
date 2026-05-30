@@ -136,11 +136,11 @@ jobs:
         id: meta
         run: |
           if [ "${{ matrix.variant }}" = "release" ]; then
-            echo "DOCKERFILE=unbound/canary.Dockerfile" >> "$GITHUB_OUTPUT"
+            echo "DOCKERFILE=docker/canary.Dockerfile" >> "$GITHUB_OUTPUT"
             echo "TAG=canary" >> "$GITHUB_OUTPUT"
             echo "CACHE_KEY=buildcache-canary" >> "$GITHUB_OUTPUT"
           else
-            echo "DOCKERFILE=unbound/canary_quic.Dockerfile" >> "$GITHUB_OUTPUT"
+            echo "DOCKERFILE=docker/canary_quic.Dockerfile" >> "$GITHUB_OUTPUT"
             echo "TAG=canary-quic" >> "$GITHUB_OUTPUT"
             echo "CACHE_KEY=buildcache-canary-quic" >> "$GITHUB_OUTPUT"
           fi
