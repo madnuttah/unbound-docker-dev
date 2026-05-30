@@ -1,12 +1,8 @@
-# --- canary.Dockerfile (TEIL 1) ---
-# Canary‑Build, kein QUIC
-
 ARG BUILD_MODE=canary
 ARG QUIC=false
 
-FROM base AS base
+FROM base:Dockerfile AS base
 
-# --- canary.Dockerfile (TEIL 2) ---
 ARG UNBOUND_VERSION
 ARG OPENSSL_BUILDENV_VERSION
 ARG IMAGE_BUILD_DATE
