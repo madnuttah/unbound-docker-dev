@@ -34,7 +34,7 @@ jobs:
           UNBOUND_GIT_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)"
           echo "UNBOUND_GIT_SHA=$UNBOUND_GIT_SHA" >> $GITHUB_OUTPUT
 
-          CURRENT_SHA="$(cat unbound_git_sha 2>/dev/null || echo '')"
+          CURRENT_SHA="$(cat versions/unbound-git-sha.txt 2>/dev/null || echo '')"
 
           if [[ "$CURRENT_SHA" = "$UNBOUND_GIT_SHA" ]]; then
             echo "changed=false" >> $GITHUB_OUTPUT
@@ -75,9 +75,9 @@ jobs:
           NEW_SHA: ${{ needs.check-update.outputs.UNBOUND_GIT_SHA }}
         run: |
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
-          echo "$NEW_SHA" > unbound_git_sha
-          git add unbound_git_sha
-          git commit -m "Updated unbound_git_sha" || true
+          echo "$NEW_SHA" > versions/unbound-git-sha.txt
+          git add versions/unbound-git-sha.txt
+          git commit -m "Updated unbound_git_sha (canary)" || true
           git push origin main || true
 
   build:
@@ -86,18 +86,8 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
       matrix:
-        variant: [standard, quic]
-        arch:
-          - linux/amd64
-          - linux/arm64
-          - linux/386
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/ppc64le
-          - linux/s390x
-          - linux/riscv64
+        variant: [release, quic]
 
     env:
       DOCKERHUB_SLUG: "madnuttah/unbound"
@@ -119,10 +109,15 @@ jobs:
         id: vars
         run: |
           echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
-          echo "UNBOUND_VERSION=$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure | awk -F= '/^version=/ { print $2 }')" >> $GITHUB_OUTPUT
-          source buildvars
-          echo "OPENSSL_BUILDENV_VERSION=$OPENSSL_BUILDENV_VERSION" >> $GITHUB_OUTPUT
-          echo "OPENSSL_QUIC_BUILDENV_VERSION=$OPENSSL_QUIC_BUILDENV_VERSION" >> $GITHUB_OUTPUT
+
+          echo "UNBOUND_VERSION=$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
+            | awk -F= '/^version=/ { print $2 }')" >> $GITHUB_OUTPUT
+
+          echo OPENSSL_BUILDENV_VERSION="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
+            | jq -r '[.[] | select(.prerelease == false)][0].name')" >> $GITHUB_OUTPUT
+
+          echo OPENSSL_QUIC_BUILDENV_VERSION="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
+            | jq -r '[.[] | select(.prerelease == false)][0].name')-quic" >> $GITHUB_OUTPUT
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -137,14 +132,30 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Select variant metadata
+        id: meta
+        run: |
+          if [ "${{ matrix.variant }}" = "release" ]; then
+            echo "DOCKERFILE=unbound/canary.Dockerfile" >> "$GITHUB_OUTPUT"
+            echo "TAG=canary" >> "$GITHUB_OUTPUT"
+            echo "CACHE_KEY=buildcache-canary" >> "$GITHUB_OUTPUT"
+          else
+            echo "DOCKERFILE=unbound/canary_quic.Dockerfile" >> "$GITHUB_OUTPUT"
+            echo "TAG=canary-quic" >> "$GITHUB_OUTPUT"
+            echo "CACHE_KEY=buildcache-canary-quic" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push Canary image
         uses: docker/build-push-action@v6
         with:
           context: .
           builder: ${{ steps.buildx.outputs.name }}
-          platforms: ${{ matrix.arch }}
+          file: ${{ steps.meta.outputs.DOCKERFILE }}
 
-          file: ${{ matrix.variant == 'quic' && 'unbound/canary_quic.Dockerfile' || 'unbound/canary.Dockerfile' }}
+          platforms: |
+            linux/amd64,linux/arm64,linux/386,
+            linux/arm/v6,linux/arm/v7,
+            linux/ppc64le,linux/s390x,linux/riscv64
 
           build-args: |
             IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
@@ -153,14 +164,12 @@ jobs:
             OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
-            type=registry,ref=madnuttah/unbound:buildcache-canary-${{ matrix.variant }}-${{ matrix.arch }}
+            type=registry,ref=madnuttah/unbound:${{ steps.meta.outputs.CACHE_KEY }}
 
           cache-to: |
-            type=registry,ref=madnuttah/unbound:buildcache-canary-${{ matrix.variant }}-${{ matrix.arch }},mode=max
+            type=registry,ref=madnuttah/unbound:${{ steps.meta.outputs.CACHE_KEY }},mode=max
 
-          push: false
-          sbom: true
-          provenance: true
+          push: true
 
           tags: |
-            madnuttah/unbound:${{ matrix.variant == 'quic' && 'canary-quic' || 'canary' }}
+            madnuttah/unbound:${{ steps.meta.outputs.TAG }}
