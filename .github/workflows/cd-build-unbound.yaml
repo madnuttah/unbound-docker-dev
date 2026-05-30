@@ -142,39 +142,39 @@ jobs:
             echo "CACHE_KEY=buildcache-quic" >> "$GITHUB_OUTPUT"
           fi
 
-- name: Build and push image
-  uses: docker/build-push-action@v6
-  with:
-    context: .
-    builder: "${{ steps.buildx.outputs.name }}"
-    file: "${{ steps.meta.outputs.DOCKERFILE }}"
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          builder: "${{ steps.buildx.outputs.name }}"
+          file: "${{ steps.meta.outputs.DOCKERFILE }}"
 
-    build-contexts: |
-      base=docker/base.Dockerfile
+          build-contexts: |
+            base=docker/base.Dockerfile
 
-    platforms: |
-      linux/amd64,linux/arm64,linux/386,
-      linux/arm/v6,linux/arm/v7,
-      linux/ppc64le,linux/s390x,linux/riscv64
+          platforms: |
+            linux/amd64,linux/arm64,linux/386,
+            linux/arm/v6,linux/arm/v7,
+            linux/ppc64le,linux/s390x,linux/riscv64
 
-    push: ${{ github.event_name != 'pull_request' }}
-    sbom: ${{ github.event_name != 'pull_request' }}
-    provenance: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: ${{ github.event_name != 'pull_request' }}
 
-    build-args: |
-      IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
-      UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
-      UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
-      UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
-      OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}
-      OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+          build-args: |
+            IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
+            UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
+            UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
+            UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
+            OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
-    cache-from: |
-      type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }}
+          cache-from: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }}
 
-    cache-to: |
-      type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }},mode=max
+          cache-to: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }},mode=max
 
-    tags: |
-      ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}${{ steps.meta.outputs.TAG_SUFFIX }}
-      ${{ env.DOCKERHUB_SLUG }}:latest${{ steps.meta.outputs.TAG_SUFFIX }}
+          tags: |
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}${{ steps.meta.outputs.TAG_SUFFIX }}
+            ${{ env.DOCKERHUB_SLUG }}:latest${{ steps.meta.outputs.TAG_SUFFIX }}

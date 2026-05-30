@@ -87,7 +87,15 @@ jobs:
 
     strategy:
       matrix:
-        variant: [release, quic]
+        build:
+          - name: canary
+            dockerfile: docker/canary.Dockerfile
+            tag: canary
+            cache_key: buildcache-canary
+          - name: canary-quic
+            dockerfile: docker/canary_quic.Dockerfile
+            tag: canary-quic
+            cache_key: buildcache-canary-quic
 
     env:
       DOCKERHUB_SLUG: "madnuttah/unbound-dev"
@@ -135,44 +143,38 @@ jobs:
       - name: Select variant metadata
         id: meta
         run: |
-          if [ "${{ matrix.variant }}" = "release" ]; then
-            echo "DOCKERFILE=docker/canary.Dockerfile" >> "$GITHUB_OUTPUT"
-            echo "TAG=canary" >> "$GITHUB_OUTPUT"
-            echo "CACHE_KEY=buildcache-canary" >> "$GITHUB_OUTPUT"
-          else
-            echo "DOCKERFILE=docker/canary_quic.Dockerfile" >> "$GITHUB_OUTPUT"
-            echo "TAG=canary-quic" >> "$GITHUB_OUTPUT"
-            echo "CACHE_KEY=buildcache-canary-quic" >> "$GITHUB_OUTPUT"
-          fi
+          echo "DOCKERFILE=${{ matrix.build.dockerfile }}" >> "$GITHUB_OUTPUT"
+          echo "TAG=${{ matrix.build.tag }}" >> "$GITHUB_OUTPUT"
+          echo "CACHE_KEY=${{ matrix.build.cache_key }}" >> "$GITHUB_OUTPUT"
 
-- name: Build and push Canary image
-  uses: docker/build-push-action@v6
-  with:
-    context: .
-    builder: ${{ steps.buildx.outputs.name }}
-    file: ${{ steps.meta.outputs.DOCKERFILE }}
+      - name: Build and push Canary image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          builder: ${{ steps.buildx.outputs.name }}
+          file: ${{ steps.meta.outputs.DOCKERFILE }}
 
-    build-contexts: |
-      base=docker/base.Dockerfile
+          build-contexts: |
+            base=docker/base.Dockerfile
 
-    platforms: |
-      linux/amd64,linux/arm64,linux/386,
-      linux/arm/v6,linux/arm/v7,
-      linux/ppc64le,linux/s390x,linux/riscv64
+          platforms: |
+            linux/amd64,linux/arm64,linux/386,
+            linux/arm/v6,linux/arm/v7,
+            linux/ppc64le,linux/s390x,linux/riscv64
 
-    build-args: |
-      IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
-      UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}
-      OPENSSL_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}
-      OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+          build-args: |
+            IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
+            UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}
+            OPENSSL_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
-    cache-from: |
-      type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }}
+          cache-from: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }}
 
-    cache-to: |
-      type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }},mode=max
+          cache-to: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.CACHE_KEY }},mode=max
 
-    push: true
+          push: true
 
-    tags: |
-      ${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.TAG }}
+          tags: |
+            ${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.TAG }}
