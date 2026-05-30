@@ -162,5 +162,5 @@ jobs:
             type=registry,ref=madnuttah/unbound:${{ steps.meta.outputs.CACHE_KEY }},mode=max
 
           tags: |
-            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}-${{ needs.buildvars.outputs.SUBVERSION }}${{ steps.meta.outputs.TAG_SUFFIX }}
-            ${{ env.DOCKERHUB_SLUG }}:latest${{ steps.meta.outputs.TAG_SUFFIX }}
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}-${{ needs.buildvars.outputs.SUBVERSION }}${{ steps.meta.outputs.TAG_SUFFIX }}-test
+            ${{ env.DOCKERHUB_SLUG }}:latest${{ steps.meta.outputs.TAG_SUFFIX }}-test
