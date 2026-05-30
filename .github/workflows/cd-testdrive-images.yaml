@@ -2,88 +2,62 @@ name: CD Testdrive Unbound Docker Images
 
 on:
   workflow_run:
-    workflows:
-      - "CD Build Canary Distroless Unbound Docker Image"
-      - "CD Build Canary Distroless Unbound QUIC Docker Image"
-      - "CD Build Distroless Unbound Docker Image"
-      - "CD Build Distroless Unbound QUIC Docker Image"
-    types:
-      - completed
+    workflows: ["CD Build Unbound"]
+    types: [completed]
 
 permissions:
   actions: read
   contents: read
 
 jobs:
-  test-image:
+  test-images:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
+        uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
-      - name: Determine image tag
-        id: tag
-        env:
-          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+      - name: Determine built variants
+        id: variants
         run: |
-          case "$WORKFLOW_NAME" in
-            "CD Build Canary Distroless Unbound Docker Image")
-              echo "IMAGE_TAG=madnuttah/unbound:canary" >> "$GITHUB_ENV"
-              ;;
-            "CD Build Canary Distroless Unbound QUIC Docker Image")
-              echo "IMAGE_TAG=madnuttah/unbound:canary-quic" >> "$GITHUB_ENV"
-              ;;
-            "CD Build Distroless Unbound QUIC Docker Image")
-              echo "IMAGE_TAG=madnuttah/unbound:latest-quic" >> "$GITHUB_ENV"
-              ;;
-            "CD Build Distroless Unbound Docker Image")
-              echo "IMAGE_TAG=madnuttah/unbound:latest" >> "$GITHUB_ENV"
-              ;;
-            *)
-              exit 1
-              ;;
-          esac
+          # We always test both variants for Release builds
+          echo "VARIANTS=standard quic" >> $GITHUB_OUTPUT
 
       - name: Login to Docker Hub
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Pull image
-        run: docker pull "$IMAGE_TAG"
-
-      - name: Start container
+      - name: Test each variant
         run: |
-          if [[ "$IMAGE_TAG" == *"-quic" ]]; then
-            docker run -d --name unbound-dns -p 8853:8853/udp "$IMAGE_TAG"
-          else
-            docker run -d --name unbound-dns -p 5335:5335/udp "$IMAGE_TAG"
-          fi
-
-      - name: Wait for Unbound readiness
-        run: |
-          for i in {1..20}; do
-            if docker logs unbound-dns 2>&1 | grep -q "ready to serve"; then
-              exit 0
+          for V in ${{ steps.variants.outputs.VARIANTS }}; do
+            if [ "$V" = "quic" ]; then
+              TAG="madnuttah/unbound:latest-quic"
+              PORT=8853
+            else
+              TAG="madnuttah/unbound:latest"
+              PORT=5335
             fi
-            sleep 1
+
+            echo "Testing $TAG"
+
+            docker pull "$TAG"
+
+            docker run -d --name unbound-dns-$V -p ${PORT}:${PORT}/udp "$TAG"
+
+            echo "Waiting for readiness..."
+            for i in {1..20}; do
+              if docker logs unbound-dns-$V 2>&1 | grep -q "ready to serve"; then
+                break
+              fi
+              sleep 1
+            done
+
+            docker exec unbound-dns-$V drill @127.0.0.1 -p ${PORT} cloudflare.com A
+
+            docker rm -f unbound-dns-$V || true
           done
-          docker logs unbound-dns
-          exit 1
-
-      - name: DNS test
-        run: |
-          if [[ "$IMAGE_TAG" == *"-quic" ]]; then
-            timeout 10s docker exec unbound-dns drill @127.0.0.1 -p 8853 cloudflare.com A
-          else
-            timeout 10s docker exec unbound-dns drill @127.0.0.1 -p 5335 cloudflare.com A
-          fi
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f unbound-dns || true
