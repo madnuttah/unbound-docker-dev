@@ -1,0 +1,13 @@
+# --- canary_quic.Dockerfile (TEIL 1) ---
+# Canary‑Build, QUIC aktiviert
+
+ARG BUILD_MODE=canary
+ARG QUIC=true
+
+FROM docker/base.Dockerfile AS base
+
+# --- canary_quic.Dockerfile (TEIL 2) ---
+ARG UNBOUND_VERSION
+ARG OPENSSL_QUIC_BUILDENV_VERSION
+ARG IMAGE_BUILD_DATE
+ARG UNBOUND_DOCKER_IMAGE_VERSION="canary-quic"

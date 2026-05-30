@@ -1,3 +1,4 @@
+# --- CD Tag And Release (TEIL 1) ---
 name: CD Tag And Release
 
 on:
@@ -18,22 +19,23 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (
         github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.name == 'CD Build Distroless Unbound Docker Image'
+        github.event.workflow_run.name == 'CD Build Unbound'
       )
+
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
+        uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
       - name: Checkout source
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Import GPG key
         id: IMPORT_GPG
-        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd
+        uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
@@ -42,6 +44,7 @@ jobs:
           git_tag_gpgsign: true
           git_push_gpgsign: false
           trust_level: 5
+# --- CD Tag And Release (TEIL 2) ---
 
       - name: Push tag and upload release to GitHub
         env:
@@ -51,10 +54,11 @@ jobs:
           GIT_COMMITTER_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
           GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
         run: |
-          git remote set-url origin https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
 
-          UNBOUND_VERSION="$(grep '^UNBOUND_VERSION=' buildvars | cut -d'=' -f2-)"
-          UNBOUND_DOCKER_VERSION="$(grep '^UNBOUND_DOCKER_IMAGE_VERSION=' buildvars | cut -d'=' -f2-)"
+          # --- Versionen aus versions/*.txt lesen ---
+          UNBOUND_VERSION="$(cat versions/unbound-version.txt)"
+          UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image-version.txt)"
           RELEASE_TAG="v$UNBOUND_DOCKER_VERSION"
 
           git fetch --all --tags
@@ -62,7 +66,7 @@ jobs:
             exit 1
           fi
 
-          WHATS_NEW="* Updated Unbound to version ${UNBOUND_VERSION}\n* Unbound+QUIC build is currently building…"
+          WHATS_NEW="* Updated Unbound to version ${UNBOUND_VERSION}\n* QUIC build is currently building…"
 
           git tag -a "$RELEASE_TAG" -m "$RELEASE_TAG"
           git push -u origin "$RELEASE_TAG"
