@@ -25,6 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          ref: main
           persist-credentials: false
           clean: false
           sparse-checkout-cone-mode: false
@@ -64,6 +65,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          ref: main
           persist-credentials: false
           clean: false
           sparse-checkout-cone-mode: false
@@ -119,10 +121,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          ref: main
           persist-credentials: false
           clean: false
           sparse-checkout-cone-mode: false
           fetch-depth: 0
+
 
       - name: Set buildvars
         id: vars
