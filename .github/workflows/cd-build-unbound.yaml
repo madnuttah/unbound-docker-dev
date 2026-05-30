@@ -102,8 +102,9 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@v4
         with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
           persist-credentials: false
           fetch-depth: 0
 
