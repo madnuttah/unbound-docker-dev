@@ -133,11 +133,11 @@ jobs:
         id: meta
         run: |
           if [ "${{ matrix.variant }}" = "release" ]; then
-            echo "DOCKERFILE=unbound/release.Dockerfile" >> "$GITHUB_OUTPUT"
+            echo "DOCKERFILE=docker/release.Dockerfile" >> "$GITHUB_OUTPUT"
             echo "TAG_SUFFIX=" >> "$GITHUB_OUTPUT"
             echo "CACHE_KEY=buildcache" >> "$GITHUB_OUTPUT"
           else
-            echo "DOCKERFILE=unbound/release_quic.Dockerfile" >> "$GITHUB_OUTPUT"
+            echo "DOCKERFILE=docker/release_quic.Dockerfile" >> "$GITHUB_OUTPUT"
             echo "TAG_SUFFIX=-quic" >> "$GITHUB_OUTPUT"
             echo "CACHE_KEY=buildcache-quic" >> "$GITHUB_OUTPUT"
           fi
