@@ -67,7 +67,6 @@ jobs:
 
           OPENSSL="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases | jq -r '[.[] | select(.prerelease == false)][0].name')"
           echo "OPENSSL_BUILDENV_VERSION=$OPENSSL" >> "$GITHUB_OUTPUT"
-          echo "OPENSSL_QUIC_BUILDENV_VERSION=${OPENSSL}-quic" >> "$GITHUB_OUTPUT"
 
       - uses: crazy-max/ghaction-import-gpg@v6
         id: IMPORT_GPG

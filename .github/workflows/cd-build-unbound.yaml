@@ -11,8 +11,7 @@ on:
   push:
     paths:
       - "versions/unbound.txt"
-      - "versions/openssl.txt"
-      - "versions/openssl-quic.txt"
+#      - "versions/openssl.txt"
 
 permissions: {}
 
@@ -30,7 +29,6 @@ jobs:
       UNBOUND_VERSION: "${{ steps.vars.outputs.UNBOUND_VERSION }}"
       UNBOUND_SHA256: "${{ steps.vars.outputs.UNBOUND_SHA256 }}"
       OPENSSL_BUILDENV_VERSION: "${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}"
-      OPENSSL_QUIC_BUILDENV_VERSION: "${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}"
       UNBOUND_DOCKER_IMAGE_VERSION: "${{ steps.vars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}"
       SUBVERSION: "${{ steps.vars.outputs.SUBVERSION }}"
 
@@ -78,7 +76,6 @@ jobs:
           echo "UNBOUND_VERSION=$(cat versions/unbound.txt)" >> "$GITHUB_OUTPUT"
           echo "UNBOUND_SHA256=$(cat versions/unbound-sha256.txt)" >> "$GITHUB_OUTPUT"
           echo "OPENSSL_BUILDENV_VERSION=$(cat versions/openssl.txt)" >> "$GITHUB_OUTPUT"
-          echo "OPENSSL_QUIC_BUILDENV_VERSION=$(cat versions/openssl-quic.txt)" >> "$GITHUB_OUTPUT"
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             SUBV="${{ github.event.inputs.SUBVERSION }}"
@@ -159,7 +156,6 @@ jobs:
             UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
             UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
             OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}
-            OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
             type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache
