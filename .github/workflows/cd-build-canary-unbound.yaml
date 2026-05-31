@@ -16,25 +16,17 @@ jobs:
       changed: ${{ steps.check.outputs.changed }}
 
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+      - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           ref: main
           persist-credentials: false
           clean: false
-          sparse-checkout-cone-mode: false
           fetch-depth: 0
-
-      - name: Debug workspace
-        run: |
-          echo "Workspace content:"
-          ls -R .
 
       - name: Check for update
         id: check
@@ -56,24 +48,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+      - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           ref: main
           persist-credentials: false
           clean: false
-          sparse-checkout-cone-mode: false
           fetch-depth: 0
 
-      - name: Import GPG key
+      - uses: crazy-max/ghaction-import-gpg@v6
         id: IMPORT_GPG
-        uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
@@ -112,27 +100,17 @@ jobs:
       DOCKERHUB_SLUG: "madnuttah/unbound-dev"
 
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+      - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           ref: main
           persist-credentials: false
           clean: false
-          sparse-checkout-cone-mode: false
           fetch-depth: 0
-
-      - name: Debug build context
-        run: |
-          echo "=== WORKSPACE ==="
-          ls -R .
-          echo "=== BASE CONTEXT ==="
-          ls -R docker/base || echo "docker/base DOES NOT EXIST"
 
       - name: Set buildvars
         id: vars
@@ -148,15 +126,11 @@ jobs:
           echo OPENSSL_QUIC_BUILDENV_VERSION="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
             | jq -r '[.[] | select(.prerelease == false)][0].name')-quic" >> $GITHUB_OUTPUT
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
         id: buildx
-        uses: docker/setup-buildx-action@v3
 
-      - name: Login to Dockerhub
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -167,16 +141,8 @@ jobs:
           echo "DOCKERFILE=${{ matrix.build.dockerfile }}" >> "$GITHUB_OUTPUT"
           echo "TAG=${{ matrix.build.tag }}" >> "$GITHUB_OUTPUT"
           echo "CACHE_KEY=${{ matrix.build.cache_key }}" >> "$GITHUB_OUTPUT"
-   
 
-   
-      - name: Enable plain progress
-        run: |
-          echo "BUILDKIT_PROGRESS=plain" >> $GITHUB_ENV
-
-
-      - name: Build and push Canary image
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
         with:
           context: .
           builder: ${{ steps.buildx.outputs.name }}
