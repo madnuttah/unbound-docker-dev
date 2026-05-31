@@ -1,4 +1,4 @@
-name: CD Build Canary Distroless Unbound QUIC Docker Image
+name: CD Build Canary Unbound QUIC Docker Image
 
 on:
   workflow_run:
@@ -38,7 +38,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+         # persist-credentials: false
           fetch-depth: 0
 
       - name: Set buildvars
