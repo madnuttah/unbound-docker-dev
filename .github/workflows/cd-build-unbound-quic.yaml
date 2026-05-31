@@ -2,7 +2,7 @@ name: CD Build Unbound QUIC Docker Image
 
 on:
   workflow_run:
-    workflows: [CD Build Distroless Unbound Docker Image]
+    workflows: [CD Build Unbound Docker Image]
     types:
       - completed
   workflow_dispatch:
@@ -91,10 +91,10 @@ jobs:
           provenance: ${{ github.event_name != 'pull_request' }}
 
           cache-from: |
-            type=registry,ref=madnuttah/unbound:buildcache-quic
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic
 
           cache-to: |
-            type=registry,ref=madnuttah/unbound:buildcache-quic,mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic,mode=max
 
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}-quic

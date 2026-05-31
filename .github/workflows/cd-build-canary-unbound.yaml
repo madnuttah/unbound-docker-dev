@@ -118,9 +118,9 @@ jobs:
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
           cache-from: |
-            type=registry,ref=madnuttah/unbound:buildcache-canary
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary
           cache-to: |
-            type=registry,ref=madnuttah/unbound:buildcache-canary,mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary,mode=max
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:canary

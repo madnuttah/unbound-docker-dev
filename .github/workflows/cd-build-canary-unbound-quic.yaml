@@ -2,7 +2,7 @@ name: CD Build Canary Unbound QUIC Docker Image
 
 on:
   workflow_run:
-    workflows: ["CD Build Canary Distroless Unbound Docker Image"]
+    workflows: ["CD Build Canary Unbound Docker Image"]
     types:
       - completed
   workflow_dispatch:
@@ -90,10 +90,10 @@ jobs:
           provenance: true
 
           cache-from: |
-            type=registry,ref=madnuttah/unbound:buildcache-canary-quic
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-quic
 
           cache-to: |
-            type=registry,ref=madnuttah/unbound:buildcache-canary-quic,mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-quic,mode=max
 
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:canary-quic
