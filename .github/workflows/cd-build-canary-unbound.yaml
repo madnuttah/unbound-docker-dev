@@ -127,6 +127,12 @@ jobs:
           sparse-checkout-cone-mode: false
           fetch-depth: 0
 
+      - name: Debug build context
+        run: |
+          echo "=== WORKSPACE ==="
+          ls -R .
+          echo "=== BASE CONTEXT ==="
+          ls -R docker/base || echo "docker/base DOES NOT EXIST"
 
       - name: Set buildvars
         id: vars
