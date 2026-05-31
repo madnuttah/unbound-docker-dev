@@ -23,8 +23,7 @@ jobs:
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           fetch-depth: 0
-          clean: false
-          persist-credentials: false
+          persist-credentials: true
   
       - name: Check for update
         id: check
@@ -58,8 +57,7 @@ jobs:
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           fetch-depth: 0
-          clean: false
-          persist-credentials: false
+          persist-credentials: true
   
 
       - name: Set buildvars
