@@ -167,6 +167,13 @@ jobs:
           echo "DOCKERFILE=${{ matrix.build.dockerfile }}" >> "$GITHUB_OUTPUT"
           echo "TAG=${{ matrix.build.tag }}" >> "$GITHUB_OUTPUT"
           echo "CACHE_KEY=${{ matrix.build.cache_key }}" >> "$GITHUB_OUTPUT"
+   
+
+   
+      - name: Enable plain progress
+        run: |
+          echo "BUILDKIT_PROGRESS=plain" >> $GITHUB_ENV
+
 
       - name: Build and push Canary image
         uses: docker/build-push-action@v6
