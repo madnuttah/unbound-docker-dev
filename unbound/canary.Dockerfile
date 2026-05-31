@@ -116,29 +116,59 @@ RUN set -xe; \
     "/usr/local/unbound/log.d/" && \
   touch /usr/local/unbound/log.d/unbound.log && \
   chown -R _unbound:_unbound /usr/local/unbound/ && \
-  ln -s /dev/random /dev/urandom /dev/null /usr/local/unbound/unbound.d/ && \
+  ln -s /dev/random /usr/local/unbound/unbound.d/random && \
+  ln -s /dev/urandom /usr/local/unbound/unbound.d/urandom && \
+  ln -s /dev/null /usr/local/unbound/unbound.d/null && \
   chown -Rh _unbound:_unbound \
     /usr/local/unbound/unbound.d/random \
     /usr/local/unbound/unbound.d/null \
     /usr/local/unbound/unbound.d/urandom && \
   chmod -R 770 /usr/local/unbound/sbin/*.sh && \
-  rm -rf \
-    /usr/local/unbound/unbound.conf \
+ rm -rf \
     /usr/local/unbound/unbound.d/share \
     /usr/local/unbound/etc \
     /usr/local/unbound/iana.d/root.hints.* \
     /usr/local/unbound/iana.d/root.zone.* \
     /usr/local/unbound/unbound.d/include \
     /usr/local/unbound/unbound.d/lib && \
-  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound && \
-  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-anchor && \
-  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-checkconf && \
-  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
-  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host
-  
-COPY ./unbound/root/usr/local/unbound/unbound.conf \
-  /usr/local/unbound/unbound.conf
+    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound && \
+    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-anchor && \
+    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-checkconf  && \
+    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
+    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host 
+    # rm -rf \
+    # /usr/local/unbound/unbound.conf \
+    # /usr/local/unbound/unbound.d/share \
+    # /usr/local/unbound/etc \
+    # /usr/local/unbound/iana.d/root.hints.* \
+    # /usr/local/unbound/iana.d/root.zone.* \
+    # /usr/local/unbound/unbound.d/include \
+    # /usr/local/unbound/unbound.d/lib && \
+    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound && \
+    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-anchor && \
+    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-checkconf  && \
+    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
+    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host
+    
+# Copy patch script + override file
+COPY patch-unbound-conf.sh /usr/local/bin/patch-unbound-conf.sh
+COPY unbound.conf.override /tmp/unbound.conf.override
 
+# Make script executable
+RUN chmod +x /usr/local/bin/patch-unbound-conf.sh
+
+# Patch the vanilla config
+RUN /usr/local/bin/patch-unbound-conf.sh \
+      /usr/local/unbound/unbound.conf \
+      /tmp/unbound.conf.override
+
+# Cleanup
+RUN rm -f /tmp/unbound.conf.override /usr/local/bin/patch-unbound-conf.sh
+
+    
+#COPY ./unbound/root/usr/local/unbound/unbound.conf \
+#  /usr/local/unbound/unbound.conf
+        
 FROM scratch AS stage
 
 COPY --from=buildenv /usr/local/unbound/ \
