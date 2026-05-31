@@ -1,7 +1,7 @@
 ARG BUILD_MODE=canary
 ARG QUIC=false
 
-FROM mybase:Dockerfile AS base
+FROM base AS base
 
 ARG UNBOUND_VERSION
 ARG OPENSSL_BUILDENV_VERSION

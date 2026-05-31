@@ -1,7 +1,7 @@
 ARG BUILD_MODE=release
 ARG QUIC=false
 
-FROM base:Dockerfile AS base
+FROM base AS base
 
 ARG UNBOUND_VERSION
 ARG UNBOUND_SHA256
