@@ -21,9 +21,10 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
           fetch-depth: 0
-          clean: true
-          persist-credentials: true
+          clean: false
+          persist-credentials: false
   
       - name: Check for update
         id: check
@@ -55,9 +56,11 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
           fetch-depth: 0
-          clean: true
-          persist-credentials: true
+          clean: false
+          persist-credentials: false
+  
 
       - name: Set buildvars
         id: vars
