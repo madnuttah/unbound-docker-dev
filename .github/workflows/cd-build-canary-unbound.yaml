@@ -88,11 +88,11 @@ jobs:
       matrix:
         build:
           - name: canary
-            dockerfile: docker/canary.Dockerfile
+            dockerfile: unbound/canary.Dockerfile
             tag: canary
             cache_key: buildcache-canary
           - name: canary-quic
-            dockerfile: docker/canary_quic.Dockerfile
+            dockerfile: unbound/canary_quic.Dockerfile
             tag: canary-quic
             cache_key: buildcache-canary-quic
 
@@ -148,8 +148,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           file: ${{ steps.meta.outputs.DOCKERFILE }}
 
-          build-contexts: |
-            base=docker/base
+    
 
           platforms: |
             linux/amd64,linux/arm64,linux/386,
