@@ -1,5 +1,4 @@
-# --- BASE DOCKERFILE (TEIL 1) ---
-# Parameterisierung für Release/Canary + QUIC/Non‑QUIC
+FROM scratch as fuckyou
 
 ARG BUILD_MODE=release        # release | canary
 ARG QUIC=false               # true | false

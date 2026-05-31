@@ -178,7 +178,6 @@ jobs:
       - name: Build and push Canary image
         uses: docker/build-push-action@v6
         with:
-          debug: true
           context: .
           builder: ${{ steps.buildx.outputs.name }}
           file: ${{ steps.meta.outputs.DOCKERFILE }}
