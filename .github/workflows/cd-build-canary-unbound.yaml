@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DOCKERHUB_SLUG: "madnuttah/unbound"
+      DOCKERHUB_SLUG: "madnuttah/unbound-dev"
 
     steps:
       - uses: step-security/harden-runner@v2

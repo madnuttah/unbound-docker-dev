@@ -28,8 +28,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DOCKERHUB_SLUG: "madnuttah/unbound"
-      GHCR_SLUG: "ghcr.io/madnuttah/unbound"
+      DOCKERHUB_SLUG: "madnuttah/unbound-edev"
       UNBOUND_DOCKER_IMAGE_VERSION: "canary-quic"
 
     steps:
