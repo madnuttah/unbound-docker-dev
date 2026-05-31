@@ -1,0 +1,101 @@
+name: CD Build Distroless Unbound QUIC Docker Image
+
+on:
+  workflow_run:
+    workflows: [CD Build Distroless Unbound Docker Image]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  buildvars:
+    if: >
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    outputs:
+      IMAGE_BUILD_DATE: ${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
+      UNBOUND_VERSION: ${{ steps.vars.outputs.UNBOUND_VERSION }}
+      UNBOUND_SHA256: ${{ steps.vars.outputs.UNBOUND_SHA256 }}
+      UNBOUND_DOCKER_IMAGE_VERSION: ${{ steps.vars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
+      OPENSSL_QUIC_BUILDENV_VERSION: ${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Load version files
+        id: vars
+        run: |
+          echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
+          echo "UNBOUND_VERSION=$(cat versions/unbound.txt)" >> "$GITHUB_OUTPUT"
+          echo "UNBOUND_SHA256=$(cat versions/unbound-sha256.txt)" >> "$GITHUB_OUTPUT"
+          echo "UNBOUND_DOCKER_IMAGE_VERSION=$(cat versions/unbound-docker-image.txt)" >> "$GITHUB_OUTPUT"
+          echo "OPENSSL_QUIC_BUILDENV_VERSION=$(cat versions/openssl-quic.txt)" >> "$GITHUB_OUTPUT"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: buildvars
+
+    env:
+      DOCKERHUB_SLUG: "madnuttah/unbound"
+
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+        id: buildx
+
+      - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push QUIC image
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/s390x,linux/riscv64
+          builder: ${{ steps.buildx.outputs.name }}
+
+          build-args: |
+            IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
+            UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
+            UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
+            UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+
+          file: ./unbound/release_quic.Dockerfile
+
+          push: ${{ github.event_name != 'pull_request' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: ${{ github.event_name != 'pull_request' }}
+
+          cache-from: |
+            type=registry,ref=madnuttah/unbound:buildcache-quic
+
+          cache-to: |
+            type=registry,ref=madnuttah/unbound:buildcache-quic,mode=max
+
+          tags: |
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}-quic
+            ${{ env.DOCKERHUB_SLUG }}:latest-quic

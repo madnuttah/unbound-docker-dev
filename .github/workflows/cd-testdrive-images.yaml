@@ -1,0 +1,89 @@
+name: CD Testdrive Unbound Docker Images
+
+on:
+  workflow_run:
+    workflows:
+      - "CD Build Canary Distroless Unbound Docker Image"
+      - "CD Build Canary Distroless Unbound QUIC Docker Image"
+      - "CD Build Distroless Unbound Docker Image"
+      - "CD Build Distroless Unbound QUIC Docker Image"
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  test-image:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
+        with:
+          egress-policy: audit
+
+      - name: Determine image tag
+        id: tag
+        env:
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          case "$WORKFLOW_NAME" in
+            "CD Build Canary Distroless Unbound Docker Image")
+              echo "IMAGE_TAG=madnuttah/unbound:canary" >> "$GITHUB_ENV"
+              ;;
+            "CD Build Canary Distroless Unbound QUIC Docker Image")
+              echo "IMAGE_TAG=madnuttah/unbound:canary-quic" >> "$GITHUB_ENV"
+              ;;
+            "CD Build Distroless Unbound QUIC Docker Image")
+              echo "IMAGE_TAG=madnuttah/unbound:latest-quic" >> "$GITHUB_ENV"
+              ;;
+            "CD Build Distroless Unbound Docker Image")
+              echo "IMAGE_TAG=madnuttah/unbound:latest" >> "$GITHUB_ENV"
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull image
+        run: docker pull "$IMAGE_TAG" || true
+
+      - name: Start container (old logic, new workflow)
+        run: |
+          if [[ "$IMAGE_TAG" == *"-quic" ]]; then
+            docker run -d --name unbound-dns -p 5335:5335/udp "$IMAGE_TAG" || true
+          else
+            docker run -d --name unbound-dns -p 5335:5335/udp "$IMAGE_TAG"
+          fi
+
+      - name: Wait for Unbound readiness (old logic, improved)
+        run: |
+          for i in {1..20}; do
+            if docker logs unbound-dns 2>&1 | grep -q "start of service"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs unbound-dns
+          exit 1
+
+      - name: DNS test (old logic)
+        run: |
+          if [[ "$IMAGE_TAG" == *"-quic" ]]; then
+            timeout 10s docker exec unbound-dns drill cloudflare.com A || true
+          else
+            timeout 10s docker exec unbound-dns drill cloudflare.com A
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f unbound-dns || true

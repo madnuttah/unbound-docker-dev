@@ -70,6 +70,8 @@
     neg-cache-size: 1m
     unblock-lan-zones: no
     insecure-lan-zones: yes
+    so-sndbuf: 0
+    so-rcvbuf: 0
 
 [auth-zone]
     name: "."

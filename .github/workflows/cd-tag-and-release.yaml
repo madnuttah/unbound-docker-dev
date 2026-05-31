@@ -4,37 +4,36 @@ on:
   workflow_dispatch:
   workflow_run:
     workflows:
-      - "CD Pre Flight Check"
+      - "CD Build Distroless Unbound Docker Image"
     types:
       - completed
 
 permissions:
   contents: write
-  actions: read
 
 jobs:
   tag_and_release:
     runs-on: ubuntu-latest
     if: >
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success') ||
-      github.event_name == 'workflow_dispatch'
-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.name == 'CD Build Distroless Unbound Docker Image'
+      )
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
         with:
           egress-policy: audit
 
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
-          fetch-depth: 0
 
       - name: Import GPG key
         id: IMPORT_GPG
-        uses: crazy-max/ghaction-import-gpg@v6
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd
         with:
           gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
@@ -44,7 +43,6 @@ jobs:
           git_push_gpgsign: false
           trust_level: 5
 
-      - name: Push tag and upload release to GitHub
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
@@ -52,6 +50,8 @@ jobs:
           GIT_AUTHOR_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
           GIT_COMMITTER_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
           GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
+
+      - name: Push tag and upload release to GitHub
         run: |
           set -euo pipefail
 
