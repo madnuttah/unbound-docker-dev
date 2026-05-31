@@ -167,21 +167,16 @@ RUN set -xe; \
     # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
     # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host
     
-# Copy patch script + override file
-COPY patch-unbound-conf.sh /usr/local/bin/patch-unbound-conf.sh
-COPY unbound.conf.override /tmp/unbound.conf.override
+COPY ./unbound/root/usr/local/unbound/patch-unbound-conf.sh /usr/local/bin/patch-unbound-conf.sh
+COPY ./unbound/root/usr/local/unbound/unbound.conf.override /tmp/unbound.conf.override
 
-# Make script executable
 RUN chmod +x /usr/local/bin/patch-unbound-conf.sh
 
-# Patch the vanilla config
 RUN /usr/local/bin/patch-unbound-conf.sh \
       /usr/local/unbound/unbound.conf \
       /tmp/unbound.conf.override
 
-# Cleanup
 RUN rm -f /tmp/unbound.conf.override /usr/local/bin/patch-unbound-conf.sh
-
     
 #COPY ./unbound/root/usr/local/unbound/unbound.conf \
 #  /usr/local/unbound/unbound.conf
