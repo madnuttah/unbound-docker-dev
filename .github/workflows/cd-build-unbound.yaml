@@ -1,4 +1,4 @@
-name: CD Build Unbound
+name: CD Build Unbound Docker Image
 
 on:
   workflow_dispatch:

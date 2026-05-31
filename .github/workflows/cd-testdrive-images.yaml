@@ -3,10 +3,10 @@ name: CD Testdrive Unbound Docker Images
 on:
   workflow_run:
     workflows:
-      - "CD Build Canary Distroless Unbound Docker Image"
-      - "CD Build Canary Distroless Unbound QUIC Docker Image"
-      - "CD Build Distroless Unbound Docker Image"
-      - "CD Build Distroless Unbound QUIC Docker Image"
+      - "CD Build Canary Unbound Docker Image"
+      - "CD Build Canary Unbound QUIC Docker Image"
+      - "CD Build Unbound Docker Image"
+      - "CD Build Unbound QUIC Docker Image"
     types:
       - completed
 
@@ -31,16 +31,16 @@ jobs:
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
         run: |
           case "$WORKFLOW_NAME" in
-            "CD Build Canary Distroless Unbound Docker Image")
+            "CD Build Canary Unbound Docker Image")
               echo "IMAGE_TAG=madnuttah/unbound:canary" >> "$GITHUB_ENV"
               ;;
-            "CD Build Canary Distroless Unbound QUIC Docker Image")
+            "CD Build Canary Unbound QUIC Docker Image")
               echo "IMAGE_TAG=madnuttah/unbound:canary-quic" >> "$GITHUB_ENV"
               ;;
-            "CD Build Distroless Unbound QUIC Docker Image")
+            "CD Build Unbound QUIC Docker Image")
               echo "IMAGE_TAG=madnuttah/unbound:latest-quic" >> "$GITHUB_ENV"
               ;;
-            "CD Build Distroless Unbound Docker Image")
+            "CD Build Unbound Docker Image")
               echo "IMAGE_TAG=madnuttah/unbound:latest" >> "$GITHUB_ENV"
               ;;
             *)
