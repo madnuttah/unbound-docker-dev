@@ -111,6 +111,7 @@ COPY ./unbound/root/*.sh \
 
 COPY ./unbound/root/entrypoint /entrypoint
 
+# hadolint ignore=DL3018
 RUN set -xe; \
   apk --update --no-cache add \
     ca-certificates \
