@@ -39,33 +39,30 @@ jobs:
         id: vars
         run: |
           set -euo pipefail
-          
-          echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
-          
+
           UNBOUND_VERSION=$(cat versions/unbound.txt)
-          echo "UNBOUND_VERSION=${UNBOUND_VERSION}" >> "$GITHUB_OUTPUT"
-          
-          # Fetch SHA256 from release
           SHA_URL="https://github.com/NLnetLabs/unbound/releases/download/${UNBOUND_VERSION}/${UNBOUND_VERSION}.tar.gz.sha256"
-          
+
           if ! curl --fail -sL "$SHA_URL" >/dev/null; then
             printf "ERROR: SHA256 file not found for %s\n" "${UNBOUND_VERSION}" >&2
             exit 1
           fi
-          
+
           UNBOUND_SHA256=$(curl -sL "$SHA_URL" | awk '{print $1}')
-          echo "UNBOUND_SHA256=${UNBOUND_SHA256}" >> "$GITHUB_OUTPUT"
-          
           OPENSSL_BE=$(grep '^openssl=' versions/openssl-buildenv.txt | cut -d= -f2)
           OPENSSL_SUB=$(grep '^sub=' versions/openssl-buildenv.txt | cut -d= -f2)
           OPENSSL_BUILDENV_VERSION="${OPENSSL_BE}-${OPENSSL_SUB}"
-          
-          echo "OPENSSL_BE=${OPENSSL_BE}" >> "$GITHUB_OUTPUT"
-          echo "OPENSSL_SUB=${OPENSSL_SUB}" >> "$GITHUB_OUTPUT"
-          echo "OPENSSL_BUILDENV_VERSION=${OPENSSL_BUILDENV_VERSION}" >> "$GITHUB_OUTPUT"
-          
           UNBOUND_IMAGE_VERSION="${UNBOUND_VERSION}-${OPENSSL_SUB}"
-          echo "UNBOUND_IMAGE_VERSION=${UNBOUND_IMAGE_VERSION}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "UNBOUND_VERSION=${UNBOUND_VERSION}"
+            echo "UNBOUND_SHA256=${UNBOUND_SHA256}"
+            echo "OPENSSL_BE=${OPENSSL_BE}"
+            echo "OPENSSL_SUB=${OPENSSL_SUB}"
+            echo "OPENSSL_BUILDENV_VERSION=${OPENSSL_BUILDENV_VERSION}"
+            echo "UNBOUND_IMAGE_VERSION=${UNBOUND_IMAGE_VERSION}"
+          } >> "$GITHUB_OUTPUT"
 
   build:
     needs: buildvars

@@ -68,7 +68,7 @@ RUN set -xe; \
   VERSION_LINE=$(grep '^PACKAGE_VERSION=' configure) && \
   UNBOUND_VERSION=$(echo "$VERSION_LINE" | cut -d"'" -f2) && \
   echo "$UNBOUND_VERSION" > /tmp/UNBOUND_VERSION && \
-  make -j$(nproc) && \
+  make -j"$(nproc)" && \
   make install && \
   apk del --no-cache .build-deps && \
   mkdir -p "/usr/local/unbound/iana.d/" && \
@@ -124,7 +124,8 @@ RUN set -xe; \
     /usr/local/unbound/unbound.d/null \
     /usr/local/unbound/unbound.d/urandom && \
   chmod -R 770 /usr/local/unbound/sbin/*.sh && \
- rm -rf \
+  rm -rf \
+    /usr/local/unbound/unbound.conf \
     /usr/local/unbound/unbound.d/share \
     /usr/local/unbound/etc \
     /usr/local/unbound/iana.d/root.hints.* \
@@ -136,34 +137,9 @@ RUN set -xe; \
     strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-checkconf  && \
     strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
     strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host 
-    # rm -rf \
-    # /usr/local/unbound/unbound.conf \
-    # /usr/local/unbound/unbound.d/share \
-    # /usr/local/unbound/etc \
-    # /usr/local/unbound/iana.d/root.hints.* \
-    # /usr/local/unbound/iana.d/root.zone.* \
-    # /usr/local/unbound/unbound.d/include \
-    # /usr/local/unbound/unbound.d/lib && \
-    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound && \
-    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-anchor && \
-    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-checkconf  && \
-    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
-    # strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host
-    
-COPY ./unbound/root/usr/local/unbound/patch-unbound-conf.sh /usr/local/bin/patch-unbound-conf.sh
-COPY ./unbound/root/usr/local/unbound/unbound.conf.override /tmp/unbound.conf.override
 
-RUN chmod +x /usr/local/bin/patch-unbound-conf.sh
-
-RUN /usr/local/bin/patch-unbound-conf.sh \
-      /usr/local/unbound/unbound.conf \
-      /tmp/unbound.conf.override
-
-RUN rm -f /tmp/unbound.conf.override /usr/local/bin/patch-unbound-conf.sh
-
-    
-#COPY ./unbound/root/usr/local/unbound/unbound.conf \
-#  /usr/local/unbound/unbound.conf
+COPY ./unbound/root/usr/local/unbound/unbound.conf \
+  /usr/local/unbound/unbound.conf
         
 FROM scratch AS stage
 

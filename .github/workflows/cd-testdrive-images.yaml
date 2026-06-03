@@ -64,10 +64,11 @@ jobs:
           else
             docker run -d --name unbound-dns -p 5335:5335/udp "$IMAGE_TAG"
           fi
-
+          
       - name: Wait for Unbound readiness (old logic, improved)
         run: |
           for i in {1..20}; do
+            : "$i"
             if docker logs unbound-dns 2>&1 | grep -q "start of service"; then
               exit 0
             fi

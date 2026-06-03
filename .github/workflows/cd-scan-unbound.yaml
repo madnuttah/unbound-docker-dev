@@ -34,7 +34,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Pull image
-        run: docker pull $DOCKERHUB_SLUG:${{ matrix.tag }}
+        run: docker pull "$DOCKERHUB_SLUG:${{ matrix.tag }}"
 
       - name: Trivy scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25

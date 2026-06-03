@@ -79,7 +79,7 @@ RUN set -xe; \
     --enable-tfo-client \
     --enable-pie \
     --enable-relro-now && \
-  make -j$(nproc) && \
+  make -j"$(nproc)" && \
   make install && \
   apk del --no-cache .build-deps && \
   mkdir -p \
@@ -87,12 +87,12 @@ RUN set -xe; \
   curl -sSL https://www.internic.net/domain/named.cache -o /usr/local/unbound/iana.d/root.hints && \
   curl -sSL https://www.internic.net/domain/named.cache.md5 -o /usr/local/unbound/iana.d/root.hints.md5 && \
   curl -sSL https://www.internic.net/domain/named.cache.sig -o /usr/local/unbound/iana.d/root.hints.sig && \
-  ROOT_HINTS_MD5=`cat /usr/local/unbound/iana.d/root.hints.md5` && \
+  ROOT_HINTS_MD5="$(cat /usr/local/unbound/iana.d/root.hints.md5)" && \
   echo "${ROOT_HINTS_MD5} */usr/local/unbound/iana.d/root.hints" | md5sum -c - && \
   curl -sSL https://www.internic.net/domain/root.zone -o /usr/local/unbound/iana.d/root.zone && \
   curl -sSL https://www.internic.net/domain/root.zone.md5 -o /usr/local/unbound/iana.d/root.zone.md5 && \
   curl -sSL https://www.internic.net/domain/root.zone.sig -o /usr/local/unbound/iana.d/root.zone.sig && \
-  ROOT_ZONE_MD5=`cat /usr/local/unbound/iana.d/root.zone.md5` && \
+  ROOT_ZONE_MD5="$(cat /usr/local/unbound/iana.d/root.zone.md5)" && \
   echo "${ROOT_ZONE_MD5} */usr/local/unbound/iana.d/root.zone" | md5sum -c - && \
   GNUPGHOME="$(mktemp -d)" && \
   export GNUPGHOME && \
@@ -106,7 +106,7 @@ RUN set -xe; \
 COPY ./unbound/root/*.sh \
   /usr/local/unbound/sbin/
 
-COPY ./unbound/root/entrypoint /
+COPY ./unbound/root/entrypoint /entrypoint
 
 # hadolint ignore=DL3018
 RUN set -xe; \
@@ -123,7 +123,7 @@ RUN set -xe; \
     protobuf-c \
     hiredis \
     expat && \
-  mkdir -p \   
+  mkdir -p \
     "/usr/local/unbound/conf.d/" \
     "/usr/local/unbound/certs.d/" \
     "/usr/local/unbound/zones.d/" \
@@ -134,7 +134,6 @@ RUN set -xe; \
   ln -s /dev/random /usr/local/unbound/unbound.d/random && \
   ln -s /dev/urandom /usr/local/unbound/unbound.d/urandom && \
   ln -s /dev/null /usr/local/unbound/unbound.d/null && \
-    /usr/local/unbound/unbound.d/ && \
   chown -Rh _unbound:_unbound \
     /usr/local/unbound/unbound.d/random \
     /usr/local/unbound/unbound.d/null \

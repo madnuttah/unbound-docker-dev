@@ -105,7 +105,7 @@ RUN set -xe; \
 COPY ./unbound/root/*.sh \
   /usr/local/unbound/sbin/
 
-COPY ./unbound/root/entrypoint /
+COPY ./unbound/root/entrypoint /entrypoint
 
 RUN set -xe; \
   apk --update --no-cache add \
@@ -150,20 +150,6 @@ RUN set -xe; \
   strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
   strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host
 
- rm -rf \
-    /usr/local/unbound/unbound.conf \
-    /usr/local/unbound/unbound.d/share \
-    /usr/local/unbound/etc \
-    /usr/local/unbound/iana.d/root.hints.* \
-    /usr/local/unbound/iana.d/root.zone.* \
-    /usr/local/unbound/unbound.d/include \
-    /usr/local/unbound/unbound.d/lib && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-anchor && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-checkconf  && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host 
- 
 COPY ./unbound/root/usr/local/unbound/unbound.conf \
  /usr/local/unbound/unbound.conf
         
