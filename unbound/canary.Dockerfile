@@ -1,17 +1,8 @@
-ARG IMAGE_BUILD_DATE \
-  UNBOUND_VERSION \
-  UNBOUND_UID="1000" \
-  UNBOUND_GID="1000" \
-  OPENSSL_BUILDENV_VERSION
-
-FROM madnuttah/openssl-buildenv:"${OPENSSL_BUILDENV_VERSION}" AS buildenv
-
-ARG UNBOUND_UID \
-  UNBOUND_GID
-
 ENV INTERNIC_PGP="F0CB1A326BDF3F3EFA3A01FA937BB869E3A238C5" \
   UNBOUND_UID="${UNBOUND_UID}" \
   UNBOUND_GID="${UNBOUND_GID}"
+
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 WORKDIR /tmp/src
 
@@ -38,8 +29,11 @@ RUN set -xe; \
     flex \
     bison \
     apk-tools && \
-  git clone "https://github.com/NLnetLabs/unbound" && \
-  cd unbound && \
+  git clone "https://github.com/NLnetLabs/unbound"
+
+WORKDIR /tmp/src/unbound
+
+RUN set -xe; \
   ./configure \
     --prefix=/usr/local/unbound/unbound.d \
     --with-run-dir=/usr/local/unbound/unbound.d \
@@ -88,6 +82,7 @@ RUN set -xe; \
   gpg --verify /usr/local/unbound/iana.d/root.hints.sig /usr/local/unbound/iana.d/root.hints && \
   gpg --verify /usr/local/unbound/iana.d/root.zone.sig /usr/local/unbound/iana.d/root.zone && \
   /usr/local/unbound/sbin/unbound-anchor -v -a /usr/local/unbound/iana.d/root.key || true
+
 
 COPY ./unbound/root/*.sh \
   /usr/local/unbound/sbin/
