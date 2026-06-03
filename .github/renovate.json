@@ -27,34 +27,24 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^versions/unbound-sha256\\.txt$"],
+      "managerFilePatterns": ["^versions/openssl-buildenv\\.txt$"],
       "matchStrings": [
-        "^(?<currentValue>[a-f0-9]{64})$"
+        "openssl=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+[a-z]?)"
       ],
-      "datasourceTemplate": "github-release-attachments",
-      "depNameTemplate": "NLnetLabs/unbound",
-      "extractVersionTemplate": "versions/unbound.txt",
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "openssl",
+      "packageNameTemplate": "openssl/openssl",
       "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^versions/openssl\\.txt$"],
+      "managerFilePatterns": ["^versions/openssl-quic-buildenv\\.txt$"],
       "matchStrings": [
-        "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+)$"
+        "openssl=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+[a-z]?)"
       ],
-      "datasourceTemplate": "docker",
-      "depNameTemplate": "madnuttah/openssl-buildenv",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["^versions/openssl-quic\\.txt$"],
-      "matchStrings": [
-        "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+-quic)$"
-      ],
-      "datasourceTemplate": "docker",
-      "depNameTemplate": "madnuttah/openssl-buildenv",
-      "extractVersionTemplate": "^(?<version>[0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+)-quic$",
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "openssl",
+      "packageNameTemplate": "openssl/openssl",
       "versioningTemplate": "semver"
     }
   ],
@@ -70,14 +60,16 @@
       "automerge": true
     },
     {
-      "matchFileNames": ["versions/openssl.txt"],
-      "matchDepNames": ["madnuttah/openssl-buildenv"],
-      "allowedVersions": "<4.0.0"
+      "matchFileNames": ["versions/openssl-buildenv.txt"],
+      "matchDepNames": ["openssl"],
+      "allowedVersions": "<4.0.0",
+      "labels": ["bump-openssl-subversion"]
     },
     {
-      "matchFileNames": ["versions/openssl-quic.txt"],
-      "matchDepNames": ["madnuttah/openssl-buildenv"],
-      "allowedVersions": "<4.0.0"
+      "matchFileNames": ["versions/openssl-quic-buildenv.txt"],
+      "matchDepNames": ["openssl"],
+      "allowedVersions": "<4.0.0",
+      "labels": ["bump-quic-subversion"]
     }
   ]
 }

@@ -1,4 +1,5 @@
 #!/bin/sh
+set -euo pipefail
 
 unbound_root="/usr/local/unbound"
 
@@ -39,8 +40,8 @@ if [ "$disable_set_perms" = "true" ]; then
 
 else
     # Show UID/GID of _unbound
-    uid="$(id -u _unbound 2>/dev/null)"
-    gid="$(id -g _unbound 2>/dev/null)"
+    uid="$(id -u _unbound 2>/dev/null)" || uid="unknown"
+    gid="$(id -g _unbound 2>/dev/null)" || gid="unknown"
 
     printf "UNBOUND_UID: %s%s%s\n" "$bi_blue" "$uid" "$color_default"
     printf "UNBOUND_GID: %s%s%s\n\n" "$bi_blue" "$gid" "$color_default"

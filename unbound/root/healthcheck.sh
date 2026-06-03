@@ -1,4 +1,5 @@
 #!/bin/sh
+set -euo pipefail
 
 ### Environment variables
 
@@ -17,24 +18,24 @@ if [ "$ENABLE_STATS" = "true" ]; then
     logfile="$unbound_root/log.d/unbound-stats.log"
 
     # Run unbound-control and create file with statistics
-    "$unbound_root/unbound.d/sbin/unbound-control" stats_noreset > "$rawfile" 2>/dev/null
+    "$unbound_root/unbound.d/sbin/unbound-control" stats_noreset > "$rawfile" 2>/dev/null || true
 
-    sed -E '/(histogram|thread)/d' "$rawfile" > "$tmpfile"
+    sed -E '/(histogram|thread)/d' "$rawfile" > "$tmpfile" || true
 
     # Convert multiline to single line, comma-separated
-    awk -v RS="" -v OFS="," '{$1=$1}1' "$tmpfile" > "$logfile"
+    awk -v RS="" -v OFS="," '{$1=$1}1' "$tmpfile" > "$logfile" || true
 fi
 
 ### Healthcheck
 
 # Count open TCP/UDP ports
-check_port="$(netstat -ln 2>/dev/null | grep -c ":$HEALTHCHECK_PORT")"
+check_port="$(netstat -ln 2>/dev/null | grep -c ":$HEALTHCHECK_PORT" || echo 0)"
 
 if [ "$check_port" -eq 0 ]; then
-    echo "⚠️ Port $HEALTHCHECK_PORT not open"
+    printf "⚠️ Port %s not open\n" "$HEALTHCHECK_PORT"
     exit 1
 else
-    echo "✅ Port $HEALTHCHECK_PORT open"
+    printf "✅ Port %s open\n" "$HEALTHCHECK_PORT"
 fi
 
 # Exit early if extended check disabled
@@ -44,13 +45,13 @@ fi
 
 ### Extended healthcheck
 
-ip="$(drill -Q -p "$HEALTHCHECK_PORT" "$EXTENDED_HEALTHCHECK_DOMAIN" @127.0.0.1 2>/dev/null)"
+ip="$(drill -Q -p "$HEALTHCHECK_PORT" "$EXTENDED_HEALTHCHECK_DOMAIN" @127.0.0.1 2>/dev/null)" || ip=""
 
 # Check exit code AND empty output
-if [ $? -ne 0 ] || [ -z "$ip" ]; then
-    echo "⚠️ Domain '$EXTENDED_HEALTHCHECK_DOMAIN' not resolved"
+if [ -z "$ip" ]; then
+    printf "⚠️ Domain '%s' not resolved\n" "$EXTENDED_HEALTHCHECK_DOMAIN"
     exit 1
 else
-    echo "✅️ Domain '$EXTENDED_HEALTHCHECK_DOMAIN' resolved to '$ip'"
+    printf "✅ Domain '%s' resolved to '%s'\n" "$EXTENDED_HEALTHCHECK_DOMAIN" "$ip"
     exit 0
 fi

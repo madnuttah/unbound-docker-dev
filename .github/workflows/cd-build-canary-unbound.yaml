@@ -5,14 +5,18 @@ on:
     - cron: "0 19 * * mon-fri"
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  actions: read
+  contents: read
+  packages: write
+  id-token: write
 
 jobs:
-
   check-update:
     runs-on: ubuntu-latest
     outputs:
       UNBOUND_GIT_SHA: ${{ steps.check.outputs.UNBOUND_GIT_SHA }}
+      HAS_UPDATE: ${{ steps.check.outputs.HAS_UPDATE }}
 
     steps:
       - uses: step-security/harden-runner@v2
@@ -21,14 +25,16 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: false
           fetch-depth: 0
-          persist-credentials: true
-  
+
       - name: Check for update
         id: check
         run: |
-          REMOTE_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)"
+          set -euo pipefail
+          
+          REMOTE_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)" || exit 1
+          
           if [ -z "$REMOTE_SHA" ]; then
             exit 1
           fi
@@ -36,14 +42,22 @@ jobs:
           CURRENT_SHA="$(cat versions/unbound-git-sha.txt 2>/dev/null || echo '')"
 
           if [ "$CURRENT_SHA" = "$REMOTE_SHA" ]; then
-            exit 1
+            echo "HAS_UPDATE=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           echo "UNBOUND_GIT_SHA=$REMOTE_SHA" >> "$GITHUB_OUTPUT"
+          echo "HAS_UPDATE=true" >> "$GITHUB_OUTPUT"
 
   build:
     needs: check-update
+    if: needs.check-update.outputs.HAS_UPDATE == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
 
     env:
       DOCKERHUB_SLUG: "madnuttah/unbound-dev"
@@ -55,75 +69,59 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: false
           fetch-depth: 0
-          persist-credentials: true
-  
 
       - name: Set buildvars
         id: vars
         run: |
+          set -euo pipefail
+          
           echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
 
-          VERSION="$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure | awk -F= '/^version=/ { print $2 }')"
-          echo "UNBOUND_VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-
-          OPENSSL="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases | jq -r '[.[] | select(.prerelease == false)][0].name')"
-          echo "OPENSSL_BUILDENV_VERSION=$OPENSSL" >> "$GITHUB_OUTPUT"
-
-      - uses: crazy-max/ghaction-import-gpg@v6
-        id: IMPORT_GPG
-        with:
-          gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_push_gpgsign: false
-          trust_level: 5
-
-      - name: Push updated unbound-git-sha
-        env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-          NEW_SHA: ${{ needs.check-update.outputs.UNBOUND_GIT_SHA }}
-          GIT_AUTHOR_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
-          GIT_AUTHOR_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
-          GIT_COMMITTER_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
-          GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
-        run: |
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
-          echo "$NEW_SHA" > versions/unbound-git-sha.txt
-          git add versions/unbound-git-sha.txt
-          git commit -m "Updated unbound-git-sha.txt" || true
-          git push origin main || true
+          OPENSSL_BE=$(grep '^openssl=' versions/openssl-buildenv.txt | cut -d= -f2)
+          OPENSSL_SUB=$(grep '^sub=' versions/openssl-buildenv.txt | cut -d= -f2)
+          OPENSSL_BUILDENV_VERSION="${OPENSSL_BE}-${OPENSSL_SUB}"
+          
+          echo "OPENSSL_BUILDENV_VERSION=${OPENSSL_BUILDENV_VERSION}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
+
       - uses: docker/setup-buildx-action@v3
         id: buildx
 
       - uses: docker/login-action@v3
         if: github.event_name != 'pull_request'
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: "${{ secrets.DOCKERHUB_USERNAME }}"
+          password: "${{ secrets.DOCKERHUB_TOKEN }}"
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/s390x,linux/riscv64
-          builder: ${{ steps.buildx.outputs.name }}
+          builder: "${{ steps.buildx.outputs.name }}"
+          file: ./unbound/canary.Dockerfile
+          platforms: |
+            linux/amd64,linux/arm64,linux/386,
+            linux/arm/v6,linux/arm/v7,
+            linux/ppc64le,linux/s390x,linux/riscv64
+
           build-args: |
             IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
             OPENSSL_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}
-            UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}
-          file: ./unbound/canary.Dockerfile
+
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
+
           cache-from: |
             type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary
+
           cache-to: |
             type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary,mode=max
+
           push: ${{ github.event_name != 'pull_request' }}
+
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:canary
 

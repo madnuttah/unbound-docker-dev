@@ -7,29 +7,23 @@ on:
       - completed
   workflow_dispatch:
 
-permissions: {}
+permissions:
+  actions: read
+  contents: read
+  packages: write
+  id-token: write
 
 jobs:
-
-  check-update:
-    runs-on: ubuntu-latest
+  build:
     if: >
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success') ||
       github.event_name == 'workflow_dispatch'
-
-    steps:
-      - uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-
-  build:
-    needs: check-update
+    
     runs-on: ubuntu-latest
 
     env:
-      DOCKERHUB_SLUG: "madnuttah/unbound-edev"
-      UNBOUND_DOCKER_IMAGE_VERSION: "canary-quic"
+      DOCKERHUB_SLUG: "madnuttah/unbound-dev"
 
     steps:
       - uses: step-security/harden-runner@v2
@@ -38,20 +32,21 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          persist-credentials: false
           fetch-depth: 0
-          persist-credentials: true
 
       - name: Set buildvars
         id: vars
         run: |
+          set -euo pipefail
+          
           echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
 
-          VERSION="$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure | awk -F= '/^version=/ { print $2 }')"
-          echo "UNBOUND_VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-
-          OPENSSL="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases | jq -r '[.[] | select(.prerelease == false)][0].name')"
-          echo "OPENSSL_QUIC_BUILDENV_VERSION=${OPENSSL}-quic" >> "$GITHUB_OUTPUT"
+          OPENSSL_QUIC_BE=$(grep '^openssl=' versions/openssl-quic-buildenv.txt | cut -d= -f2)
+          OPENSSL_QUIC_SUB=$(grep '^sub=' versions/openssl-quic-buildenv.txt | cut -d= -f2)
+          OPENSSL_QUIC_BUILDENV_VERSION="${OPENSSL_QUIC_BE}-${OPENSSL_QUIC_SUB}-quic"
+          
+          echo "OPENSSL_QUIC_BUILDENV_VERSION=${OPENSSL_QUIC_BUILDENV_VERSION}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
 
@@ -59,43 +54,36 @@ jobs:
         id: buildx
 
       - uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.DOCKERHUB_SLUG }}
-            ${{ env.GHCR_SLUG }}
-          tags: |
-            type=raw,value=${{ env.UNBOUND_DOCKER_IMAGE_VERSION }}
+          username: "${{ secrets.DOCKERHUB_USERNAME }}"
+          password: "${{ secrets.DOCKERHUB_TOKEN }}"
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v6,linux/arm/v7,linux/ppc64le,linux/s390x,linux/riscv64
-          builder: ${{ steps.buildx.outputs.name }}
+          builder: "${{ steps.buildx.outputs.name }}"
+          file: ./unbound/canary_quic.Dockerfile
+          platforms: |
+            linux/amd64,linux/arm64,linux/386,
+            linux/arm/v6,linux/arm/v7,
+            linux/ppc64le,linux/s390x,linux/riscv64
 
           build-args: |
-            OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
             IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
-            UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}
+            OPENSSL_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
-          file: ./unbound/canary_quic.Dockerfile
-
-          push: true
-          sbom: true
-          provenance: true
+          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: ${{ github.event_name != 'pull_request' }}
 
           cache-from: |
             type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-quic
 
           cache-to: |
             type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-quic,mode=max
+
+          push: ${{ github.event_name != 'pull_request' }}
 
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:canary-quic
