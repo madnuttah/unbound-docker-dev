@@ -10,13 +10,14 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
+  #  permissions:
+  #    security-events: write # Required for upload-sarif (used by zizmor-action) to upload SARIF files.
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
+          token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Lint Dockerfiles
               
