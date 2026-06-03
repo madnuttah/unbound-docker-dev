@@ -21,7 +21,6 @@ ENV UNBOUND_VERSION="${UNBOUND_VERSION}" \
   UNBOUND_UID="${UNBOUND_UID}" \
   UNBOUND_GID="${UNBOUND_GID}"
 
-# Required for DL4006
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 WORKDIR /tmp/src
@@ -56,7 +55,6 @@ RUN set -xe; \
   tar -xzf unbound.tar.gz && \
   rm unbound.tar.gz
 
-# Fix DL3003 — replace cd with WORKDIR
 WORKDIR /tmp/src/unbound-${UNBOUND_VERSION}
 
 RUN set -xe; \

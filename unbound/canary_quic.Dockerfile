@@ -12,11 +12,11 @@ ENV INTERNIC_PGP="F0CB1A326BDF3F3EFA3A01FA937BB869E3A238C5" \
   UNBOUND_UID="${UNBOUND_UID}" \
   UNBOUND_GID="${UNBOUND_GID}"
 
-# Required for DL4006
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 WORKDIR /tmp/src
 
+# hadolint ignore=DL3018
 RUN set -xe; \
   addgroup -S -g "${UNBOUND_GID}" _unbound && \
   adduser -S -H -h /usr/local/unbound -g _unbound -u "${UNBOUND_UID}" -D -G _unbound _unbound && \
@@ -41,7 +41,6 @@ RUN set -xe; \
     apk-tools && \
   git clone "https://github.com/NLnetLabs/unbound"
 
-# Fix DL3003 — replace cd with WORKDIR
 WORKDIR /tmp/src/unbound
 
 RUN set -xe; \
@@ -101,6 +100,7 @@ COPY ./unbound/root/*.sh \
 
 COPY ./unbound/root/entrypoint /
 
+# hadolint ignore=DL3018
 RUN set -xe; \
   apk --update --no-cache add \
     ca-certificates \
@@ -147,7 +147,6 @@ RUN set -xe; \
 COPY ./unbound/root/usr/local/unbound/unbound.conf \
   /usr/local/unbound/unbound.conf
         
-
 FROM scratch AS stage
 
 COPY --from=buildenv /usr/local/unbound/ \
