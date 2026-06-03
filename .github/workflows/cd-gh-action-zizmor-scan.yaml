@@ -1,3 +1,11 @@
+name: CD GitHub Actions Security Analysis with zizmor
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["**"]
+
 jobs:
   zizmor:
     name: Run zizmor
