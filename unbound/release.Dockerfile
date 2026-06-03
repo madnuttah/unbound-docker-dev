@@ -14,12 +14,14 @@ ARG UNBOUND_VERSION \
   UNBOUND_GID
 
 ENV UNBOUND_VERSION="${UNBOUND_VERSION}" \
-  UNBOUND_DOWNLOAD_URL="https://www.nlnetlabs.nl/downloads/unbound/unbound-"${UNBOUND_VERSION}".tar.gz" \
+  UNBOUND_DOWNLOAD_URL="https://www.nlnetlabs.nl/downloads/unbound/unbound-${UNBOUND_VERSION}.tar.gz" \
   UNBOUND_PGP_RELEASES="231018690C4D903EF419146AA144323DEAACDF45" \
   UNBOUND_SHA256="${UNBOUND_SHA256}" \
   INTERNIC_PGP="F0CB1A326BDF3F3EFA3A01FA937BB869E3A238C5" \
   UNBOUND_UID="${UNBOUND_UID}" \
   UNBOUND_GID="${UNBOUND_GID}"
+
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 WORKDIR /tmp/src
 
@@ -28,13 +30,13 @@ RUN set -xe; \
   addgroup -S -g "${UNBOUND_GID}" _unbound && \
   adduser -S -H -h /usr/local/unbound -g _unbound -u "${UNBOUND_UID}" -D -G _unbound _unbound && \
   apk --update --no-cache add \
-  ca-certificates \
-  gnupg \
-  curl \
-  file \
-  binutils && \
+    ca-certificates \
+    gnupg \
+    curl \
+    file \
+    binutils && \
   apk --update --no-cache add --virtual .build-deps \
-    build-base\
+    build-base \
     libsodium-dev \
     linux-headers \
     nghttp2-dev \
@@ -46,14 +48,16 @@ RUN set -xe; \
   curl -sSL "${UNBOUND_DOWNLOAD_URL}" -o unbound.tar.gz && \
   curl -sSL "${UNBOUND_DOWNLOAD_URL}.asc" -o unbound.tar.gz.asc && \
   echo "${UNBOUND_SHA256} *unbound.tar.gz" | sha256sum -c - && \
-  GNUPGHOME="$(mktemp -d)" && \
-  export GNUPGHOME && \
+  GNUPGHOME="$(mktemp -d)" && export GNUPGHOME && \
   curl -sSL https://nlnetlabs.nl/downloads/keys/releases-g2.asc -o "${GNUPGHOME}/releases-g2.asc" && \
   gpg --import "${GNUPGHOME}/releases-g2.asc" && \
   gpg --batch --verify unbound.tar.gz.asc unbound.tar.gz && \
   tar -xzf unbound.tar.gz && \
-  rm unbound.tar.gz && \
-  cd "unbound-${UNBOUND_VERSION}" && \
+  rm unbound.tar.gz
+
+WORKDIR /tmp/src/unbound-${UNBOUND_VERSION}
+
+RUN set -xe; \
   ./configure \
     --prefix=/usr/local/unbound/unbound.d \
     --with-run-dir=/usr/local/unbound/unbound.d \
@@ -82,8 +86,7 @@ RUN set -xe; \
   make -j"$(nproc)" && \
   make install && \
   apk del --no-cache .build-deps && \
-  mkdir -p \
-    "/usr/local/unbound/iana.d/" && \
+  mkdir -p /usr/local/unbound/iana.d && \
   curl -sSL https://www.internic.net/domain/named.cache -o /usr/local/unbound/iana.d/root.hints && \
   curl -sSL https://www.internic.net/domain/named.cache.md5 -o /usr/local/unbound/iana.d/root.hints.md5 && \
   curl -sSL https://www.internic.net/domain/named.cache.sig -o /usr/local/unbound/iana.d/root.hints.sig && \
@@ -94,23 +97,20 @@ RUN set -xe; \
   curl -sSL https://www.internic.net/domain/root.zone.sig -o /usr/local/unbound/iana.d/root.zone.sig && \
   ROOT_ZONE_MD5="$(cat /usr/local/unbound/iana.d/root.zone.md5)" && \
   echo "${ROOT_ZONE_MD5} */usr/local/unbound/iana.d/root.zone" | md5sum -c - && \
-  GNUPGHOME="$(mktemp -d)" && \
-  export GNUPGHOME && \
+  GNUPGHOME="$(mktemp -d)" && export GNUPGHOME && \
   gpg --no-tty --keyserver hkps://keys.openpgp.org --recv-keys "$INTERNIC_PGP" && \
   gpg --verify /usr/local/unbound/iana.d/root.hints.sig /usr/local/unbound/iana.d/root.hints && \
   gpg --verify /usr/local/unbound/iana.d/root.zone.sig /usr/local/unbound/iana.d/root.zone && \
-    /usr/local/unbound/sbin/unbound-anchor -v -a /usr/local/unbound/iana.d/root.key || true && \
-  pkill -9 gpg-agent && \
-  pkill -9 dirmngr 
-   
-COPY ./unbound/root/*.sh \
-  /usr/local/unbound/sbin/
+  /usr/local/unbound/sbin/unbound-anchor -v -a /usr/local/unbound/iana.d/root.key || true && \
+  pkill -9 gpg-agent || true && \
+  pkill -9 dirmngr || true
 
+COPY ./unbound/root/*.sh /usr/local/unbound/sbin/
 COPY ./unbound/root/entrypoint /entrypoint
 
 # hadolint ignore=DL3018
 RUN set -xe; \
-    apk --update --no-cache add \
+  apk --update --no-cache add \
     ca-certificates \
     tzdata \
     drill \
@@ -124,13 +124,12 @@ RUN set -xe; \
     hiredis \
     expat && \
   mkdir -p \
-    "/usr/local/unbound/conf.d/" \
-    "/usr/local/unbound/certs.d/" \
-    "/usr/local/unbound/zones.d/" \
-    "/usr/local/unbound/log.d/" && \
+    /usr/local/unbound/conf.d \
+    /usr/local/unbound/certs.d \
+    /usr/local/unbound/zones.d \
+    /usr/local/unbound/log.d && \
   touch /usr/local/unbound/log.d/unbound.log && \
-  chown -R _unbound:_unbound \
-    /usr/local/unbound/ && \
+  chown -R _unbound:_unbound /usr/local/unbound && \
   ln -s /dev/random /usr/local/unbound/unbound.d/random && \
   ln -s /dev/urandom /usr/local/unbound/unbound.d/urandom && \
   ln -s /dev/null /usr/local/unbound/unbound.d/null && \
@@ -138,8 +137,7 @@ RUN set -xe; \
     /usr/local/unbound/unbound.d/random \
     /usr/local/unbound/unbound.d/null \
     /usr/local/unbound/unbound.d/urandom && \
-  chmod -R 770 \
-    /usr/local/unbound/sbin/*.sh && \
+  chmod -R 770 /usr/local/unbound/sbin/*.sh && \
   rm -rf \
     /usr/local/unbound/unbound.conf \
     /usr/local/unbound/unbound.d/share \
@@ -148,61 +146,28 @@ RUN set -xe; \
     /usr/local/unbound/iana.d/root.zone.* \
     /usr/local/unbound/unbound.d/include \
     /usr/local/unbound/unbound.d/lib && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-anchor && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-checkconf  && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
-    strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host
-  
-COPY ./unbound/root/usr/local/unbound/unbound.conf \
-  /usr/local/unbound/unbound.conf
-        
+  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound && \
+  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-anchor && \
+  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-checkconf && \
+  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-control && \
+  strip --strip-all /usr/local/unbound/unbound.d/sbin/unbound-host
+
+COPY ./unbound/root/usr/local/unbound/unbound.conf /usr/local/unbound/unbound.conf
+
 FROM scratch AS stage
 
-COPY --from=buildenv /usr/local/unbound/ \
-  /app/usr/local/unbound/
-
-COPY --from=buildenv /lib/*-musl-* \
-  /app/lib/
-
-COPY --from=buildenv /bin/sh /bin/sed /bin/grep /bin/netstat /bin/chown /bin/chgrp \
-  /app/bin/
-  
-COPY --from=buildenv /sbin/su-exec /sbin/tini \
-  /app/sbin/
-  
-COPY --from=buildenv /usr/sbin/groupmod /usr/sbin/usermod \
-  /app/usr/sbin/
-  
-COPY --from=buildenv /usr/bin/awk /usr/bin/drill /usr/bin/id \
-  /app/usr/bin/
-  
-COPY --from=buildenv /usr/local/openssl/lib/libssl.so.* /usr/local/openssl/lib/libcrypto.so.* \
-  /app/lib/
-  
-COPY --from=buildenv /usr/lib/libgcc_s* \
-  /usr/lib/libbsd* \
-  /usr/lib/libmd* \
-  /usr/lib/libsodium* \
-  /usr/lib/libexpat* \
-  /usr/lib/libprotobuf-c* \
-  /usr/lib/libnghttp2* \
-  /usr/lib/libldns* \
-  /usr/lib/libhiredis* \
-  /usr/lib/libevent* \
-  /app/usr/lib/
- 
-COPY --from=buildenv /etc/ssl/ \
-  /app/etc/ssl/
-  
-COPY --from=buildenv /etc/passwd /etc/group \
-  /app/etc/
-  
-COPY --from=buildenv /usr/share/zoneinfo/ \
-  /app/usr/share/zoneinfo/
-  
-COPY --from=buildenv --chmod=0755 /entrypoint \
-  /app/
+COPY --from=buildenv /usr/local/unbound/ /app/usr/local/unbound/
+COPY --from=buildenv /lib/*-musl-* /app/lib/
+COPY --from=buildenv /bin/sh /bin/sed /bin/grep /bin/netstat /bin/chown /bin/chgrp /app/bin/
+COPY --from=buildenv /sbin/su-exec /sbin/tini /app/sbin/
+COPY --from=buildenv /usr/sbin/groupmod /usr/sbin/usermod /app/usr/sbin/
+COPY --from=buildenv /usr/bin/awk /usr/bin/drill /usr/bin/id /app/usr/bin/
+COPY --from=buildenv /usr/local/openssl/lib/libssl.so.* /usr/local/openssl/lib/libcrypto.so.* /app/lib/
+COPY --from=buildenv /usr/lib/libgcc_s* /usr/lib/libbsd* /usr/lib/libmd* /usr/lib/libsodium* /usr/lib/libexpat* /usr/lib/libprotobuf-c* /usr/lib/libnghttp2* /usr/lib/libldns* /usr/lib/libhiredis* /usr/lib/libevent* /app/usr/lib/
+COPY --from=buildenv /etc/ssl/ /app/etc/ssl/
+COPY --from=buildenv /etc/passwd /etc/group /app/etc/
+COPY --from=buildenv /usr/share/zoneinfo/ /app/usr/share/zoneinfo/
+COPY --from=buildenv --chmod=0755 /entrypoint /app/
 
 WORKDIR /
 
@@ -218,8 +183,8 @@ ENV IMAGE_BUILD_DATE="${IMAGE_BUILD_DATE}" \
   UNBOUND_DOCKER_IMAGE_VERSION="${UNBOUND_DOCKER_IMAGE_VERSION}" \
   OPENSSL_BUILDENV_VERSION="${OPENSSL_BUILDENV_VERSION}" \
   UNBOUND_UID="${UNBOUND_UID}" \
-  PATH=/usr/local/unbound/unbound.d/sbin:"$PATH" 
-  
+  PATH=/usr/local/unbound/unbound.d/sbin:"$PATH"
+
 LABEL org.opencontainers.image.title="madnuttah/unbound" \
   org.opencontainers.image.created="${IMAGE_BUILD_DATE}" \
   org.opencontainers.image.version="${UNBOUND_DOCKER_IMAGE_VERSION}" \
@@ -233,4 +198,4 @@ LABEL org.opencontainers.image.title="madnuttah/unbound" \
 
 COPY --from=stage /app/ /
 
-ENTRYPOINT ["/sbin/tini", "--", "/entrypoint" ]
+ENTRYPOINT ["/sbin/tini", "--", "/entrypoint"]
