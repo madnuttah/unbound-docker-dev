@@ -41,7 +41,7 @@ jobs:
 
           UNBOUND_VERSION=$(cat versions/unbound.txt)
 
-          SHA_URL="https://github.com/NLnetLabs/unbound/releases/download/${UNBOUND_VERSION}/unbound-${UNBOUND_VERSION}.tar.gz.sha256"
+          SHA_URL="https://nlnetlabs.nl/downloads/unbound/unbound-${UNBOUND_VERSION}.tar.gz.sha256"
 
           if ! curl --fail -sL "$SHA_URL" >/dev/null; then
             printf "ERROR: SHA256 file not found for %s\n" "${UNBOUND_VERSION}" >&2
