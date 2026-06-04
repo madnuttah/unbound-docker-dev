@@ -17,7 +17,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["^versions/unbound\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/unbound\\.txt$/"],
       "matchStrings": [
         "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)$"
       ],
@@ -28,45 +28,43 @@
 
     {
       "customType": "regex",
-      "managerFilePatterns": ["^versions/openssl-buildenv\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/unbound-docker-image\\.txt$/"],
       "matchStrings": [
-        "openssl=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+[a-z]?)"
+        "unbound=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
       ],
       "datasourceTemplate": "github-releases",
-      "depNameTemplate": "openssl",
-      "packageNameTemplate": "openssl/openssl",
+      "depNameTemplate": "NLnetLabs/unbound",
       "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^versions/openssl-buildenv\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/unbound-docker-image\\.txt$/"],
       "matchStrings": [
         "sub=(?<currentValue>[0-9]+)"
       ],
       "datasourceTemplate": "npm",
-      "depNameTemplate": "dummy-openssl-subversion",
+      "depNameTemplate": "dummy-unbound-subversion",
       "versioningTemplate": "semver"
     },
 
     {
       "customType": "regex",
-      "managerFilePatterns": ["^versions/openssl-quic-buildenv\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/unbound-quic-docker-image\\.txt$/"],
       "matchStrings": [
-        "openssl=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+[a-z]?)"
+        "unbound=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
       ],
       "datasourceTemplate": "github-releases",
-      "depNameTemplate": "openssl",
-      "packageNameTemplate": "openssl/openssl",
+      "depNameTemplate": "NLnetLabs/unbound",
       "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["^versions/openssl-quic-buildenv\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/unbound-quic-docker-image\\.txt$/"],
       "matchStrings": [
         "sub=(?<currentValue>[0-9]+)"
       ],
       "datasourceTemplate": "npm",
-      "depNameTemplate": "dummy-quic-subversion",
+      "depNameTemplate": "dummy-unbound-quic-subversion",
       "versioningTemplate": "semver"
     }
   ],
@@ -83,32 +81,13 @@
     },
 
     {
-      "matchFileNames": ["versions/unbound.txt"],
-      "matchDepNames": ["NLnetLabs/unbound"],
-      "allowedVersions": "<2.0.0"
-    },
-
-    {
-      "matchFileNames": ["versions/openssl-buildenv.txt"],
-      "matchDepNames": ["openssl"],
-      "allowedVersions": "<4.0.0",
+      "matchFileNames": ["versions/unbound-docker-image.txt"],
+      "matchDepNames": ["dummy-unbound-subversion"],
       "semanticCommitType": "fix"
     },
     {
-      "matchFileNames": ["versions/openssl-quic-buildenv.txt"],
-      "matchDepNames": ["openssl"],
-      "allowedVersions": "<4.0.0",
-      "semanticCommitType": "fix"
-    },
-
-    {
-      "matchFileNames": ["versions/openssl-buildenv.txt"],
-      "matchDepNames": ["dummy-openssl-subversion"],
-      "semanticCommitType": "fix"
-    },
-    {
-      "matchFileNames": ["versions/openssl-quic-buildenv.txt"],
-      "matchDepNames": ["dummy-quic-subversion"],
+      "matchFileNames": ["versions/unbound-quic-docker-image.txt"],
+      "matchDepNames": ["dummy-unbound-quic-subversion"],
       "semanticCommitType": "fix"
     }
   ]

@@ -52,7 +52,9 @@ jobs:
           OPENSSL_BE=$(grep '^openssl=' versions/openssl-buildenv.txt | cut -d= -f2)
           OPENSSL_SUB=$(grep '^sub=' versions/openssl-buildenv.txt | cut -d= -f2)
           OPENSSL_BUILDENV_VERSION="${OPENSSL_BE}-${OPENSSL_SUB}"
-          UNBOUND_IMAGE_VERSION="${UNBOUND_VERSION}-${OPENSSL_SUB}"
+
+          UNBOUND_SUB=$(grep '^sub=' versions/unbound-docker-image.txt | cut -d= -f2)
+          UNBOUND_IMAGE_VERSION="${UNBOUND_VERSION}-${UNBOUND_SUB}"
 
           {
             echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")"

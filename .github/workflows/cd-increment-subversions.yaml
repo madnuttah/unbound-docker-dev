@@ -1,4 +1,4 @@
-name: CD Auto-Increment Unbound Subversions
+name: CD Increment Unbound Subversions
 
 on:
   pull_request:

@@ -54,7 +54,8 @@ jobs:
           OPENSSL_QUIC_SUB=$(grep '^sub=' versions/openssl-quic-buildenv.txt | cut -d= -f2)
           OPENSSL_QUIC_BUILDENV_VERSION="${OPENSSL_QUIC_BE}-${OPENSSL_QUIC_SUB}-quic"
 
-          UNBOUND_QUIC_IMAGE_VERSION="${UNBOUND_VERSION}-${OPENSSL_QUIC_SUB}"
+          UNBOUND_SUB=$(grep '^sub=' versions/unbound-quic-docker-image.txt | cut -d= -f2)
+          UNBOUND_QUIC_IMAGE_VERSION="${UNBOUND_VERSION}-${UNBOUND_SUB}"
 
           {
             echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -120,7 +121,7 @@ jobs:
             UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
             UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
             UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.UNBOUND_QUIC_IMAGE_VERSION }}
-            OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
             type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic
