@@ -3,7 +3,6 @@ name: CD Build Canary Unbound Docker Image
 on:
   schedule:
     - cron: "0 19 * * mon-fri"
-  workflow_dispatch:
 
 permissions:
   actions: read
