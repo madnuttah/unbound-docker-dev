@@ -5,7 +5,6 @@ on:
     paths:
       - "versions/unbound.txt"
       - "versions/openssl-buildenv.txt"
-  workflow_dispatch:
 
 permissions:
   actions: read
