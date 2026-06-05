@@ -1,8 +1,10 @@
 name: CD Build Canary Unbound Docker Image
 
 on:
-  schedule:
-    - cron: "0 19 * * mon-fri"
+  push:
+    paths:
+      - "versions/unbound-git-sha.txt"
+  workflow_dispatch:
 
 permissions:
   actions: read
@@ -11,55 +13,13 @@ permissions:
   id-token: write
 
 jobs:
-  check-update:
+  buildvars:
     runs-on: ubuntu-latest
     outputs:
-      UNBOUND_GIT_SHA: ${{ steps.check.outputs.UNBOUND_GIT_SHA }}
-      HAS_UPDATE: ${{ steps.check.outputs.HAS_UPDATE }}
-
-    steps:
-      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
-        with:
-          egress-policy: audit
-
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - name: Check for update
-        id: check
-        run: |
-          set -euo pipefail
-          
-          REMOTE_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)" || exit 1
-          
-          if [ -z "$REMOTE_SHA" ]; then
-            exit 1
-          fi
-
-          CURRENT_SHA="$(cat versions/unbound-git-sha.txt 2>/dev/null || echo '')"
-
-          if [ "$CURRENT_SHA" = "$REMOTE_SHA" ]; then
-            echo "HAS_UPDATE=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "UNBOUND_GIT_SHA=$REMOTE_SHA" >> "$GITHUB_OUTPUT"
-          echo "HAS_UPDATE=true" >> "$GITHUB_OUTPUT"
-
-  build:
-    needs: check-update
-    if: needs.check-update.outputs.HAS_UPDATE == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-
-    env:
-      DOCKERHUB_SLUG: "madnuttah/unbound-dev"
+      IMAGE_BUILD_DATE: "${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
+      OPENSSL_BE: "${{ steps.vars.outputs.OPENSSL_BE }}"
+      OPENSSL_SUB: "${{ steps.vars.outputs.OPENSSL_SUB }}"
+      OPENSSL_BUILDENV_VERSION: "${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}"
 
     steps:
       - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
@@ -82,7 +42,33 @@ jobs:
           OPENSSL_SUB=$(grep '^sub=' versions/openssl-buildenv.txt | cut -d= -f2)
           OPENSSL_BUILDENV_VERSION="${OPENSSL_BE}-${OPENSSL_SUB}"
           
-          echo "OPENSSL_BUILDENV_VERSION=${OPENSSL_BUILDENV_VERSION}" >> "$GITHUB_OUTPUT"
+          {
+            echo "OPENSSL_BE=${OPENSSL_BE}"
+            echo "OPENSSL_SUB=${OPENSSL_SUB}"
+            echo "OPENSSL_BUILDENV_VERSION=${OPENSSL_BUILDENV_VERSION}"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: buildvars
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    env:
+      DOCKERHUB_SLUG: "madnuttah/unbound-dev"
+
+    steps:
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
 
@@ -107,8 +93,8 @@ jobs:
             linux/ppc64le,linux/s390x,linux/riscv64
 
           build-args: |
-            IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}
-            OPENSSL_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}
+            IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
+            OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}
 
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
