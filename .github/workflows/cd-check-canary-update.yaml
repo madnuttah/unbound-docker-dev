@@ -14,8 +14,6 @@ permissions:
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
@@ -63,7 +61,7 @@ jobs:
           git config --local user.name "${{ steps.IMPORT_GPG.outputs.name }}"
           git config --local user.email "${{ steps.IMPORT_GPG.outputs.email }}"
 
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git remote set-url origin "https://x-access-token:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
           git add "versions/unbound-git-sha.txt"
           git commit -m "chore: checkpoint canary build git sha"
