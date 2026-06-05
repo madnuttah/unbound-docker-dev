@@ -1,6 +1,5 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-
   "extends": [
     "config:recommended",
     "config:best-practices",
@@ -10,87 +9,64 @@
     ":automergeDigest",
     "group:allDigest"
   ],
-
   "timezone": "Europe/Berlin",
   "schedule": ["every weekday", "on saturday"],
-
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["^versions/unbound\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/unbound\\.txt$/"],
       "matchStrings": [
-        "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+        "(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
       ],
       "datasourceTemplate": "github-releases",
-      "depNameTemplate": "NLnetLabs/unbound",
-      "versioningTemplate": "semver"
-    },
-
-    {
-      "customType": "regex",
-      "fileMatch": ["^versions/openssl-buildenv\\.txt$"],
-      "matchStrings": [
-        "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+\\-[0-9]+)$"
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "madnuttah/openssl-buildenv",
-      "versioningTemplate": "semver"
-    },
-
-    {
-      "customType": "regex",
-      "fileMatch": ["^versions/openssl-quic-buildenv\\.txt$"],
-      "matchStrings": [
-        "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+\\-[0-9]+)\\-quic$"
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "madnuttah/openssl-buildenv",
-      "versioningTemplate": "semver"
-    },
-
-    {
-      "customType": "regex",
-      "fileMatch": ["^versions/unbound-docker-image\\.txt$"],
-      "matchStrings": [
-        "unbound=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "NLnetLabs/unbound",
+      "depNameTemplate": "unbound",
+      "packageNameTemplate": "NLnetLabs/unbound",
+      "extractVersionTemplate": "^release-(?<version>.*)$",
       "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
-      "fileMatch": ["^versions/unbound-docker-image\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/openssl-buildenv\\.txt$/"],
+      "matchStrings": [
+        "(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+\\-[0-9]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "openssl-buildenv",
+      "packageNameTemplate": "madnuttah/openssl-buildenv",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)versions/openssl-buildenv\\.txt$/"],
       "matchStrings": [
         "sub=(?<currentValue>[0-9]+)"
       ],
       "datasourceTemplate": "npm",
-      "depNameTemplate": "dummy-unbound-subversion",
+      "depNameTemplate": "dummy-openssl-subversion",
       "versioningTemplate": "semver"
     },
-
     {
       "customType": "regex",
-      "fileMatch": ["^versions/unbound-quic-docker-image\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/openssl-quic-buildenv\\.txt$/"],
       "matchStrings": [
-        "unbound=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
+        "(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+\\-[0-9]+)\\-quic"
       ],
       "datasourceTemplate": "github-releases",
-      "depNameTemplate": "NLnetLabs/unbound",
+      "depNameTemplate": "openssl-quic-buildenv",
+      "packageNameTemplate": "madnuttah/openssl-buildenv",
       "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
-      "fileMatch": ["^versions/unbound-quic-docker-image\\.txt$"],
+      "managerFilePatterns": ["/(^|/)versions/openssl-quic-buildenv\\.txt$/"],
       "matchStrings": [
         "sub=(?<currentValue>[0-9]+)"
       ],
       "datasourceTemplate": "npm",
-      "depNameTemplate": "dummy-unbound-quic-subversion",
+      "depNameTemplate": "dummy-quic-subversion",
       "versioningTemplate": "semver"
     }
   ],
-
   "packageRules": [
     {
       "matchManagers": ["dockerfile"],
@@ -101,15 +77,16 @@
       "pinDigests": true,
       "automerge": true
     },
-
     {
-      "matchFileNames": ["versions/unbound-docker-image.txt"],
-      "matchDepNames": ["dummy-unbound-subversion"],
+      "description": "Increment OpenSSL buildenv subversion on dependency changes",
+      "matchFileNames": ["versions/openssl-buildenv.txt"],
+      "matchDepNames": ["dummy-openssl-subversion"],
       "semanticCommitType": "fix"
     },
     {
-      "matchFileNames": ["versions/unbound-quic-docker-image.txt"],
-      "matchDepNames": ["dummy-unbound-quic-subversion"],
+      "description": "Increment QUIC subversion on dependency changes",
+      "matchFileNames": ["versions/openssl-quic-buildenv.txt"],
+      "matchDepNames": ["dummy-quic-subversion"],
       "semanticCommitType": "fix"
     }
   ]
