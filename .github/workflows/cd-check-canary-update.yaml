@@ -60,6 +60,9 @@ jobs:
           
           git config --local user.name "${{ steps.IMPORT_GPG.outputs.name }}"
           git config --local user.email "${{ steps.IMPORT_GPG.outputs.email }}"
+
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+
           git add versions/unbound-git-sha.txt
           git commit -m "chore: checkpoint canary build git sha"
           git push
