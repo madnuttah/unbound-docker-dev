@@ -19,8 +19,6 @@ jobs:
       IMAGE_BUILD_DATE: "${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
       UNBOUND_VERSION: "${{ steps.vars.outputs.UNBOUND_VERSION }}"
       UNBOUND_SHA256: "${{ steps.vars.outputs.UNBOUND_SHA256 }}"
-      OPENSSL_BE: "${{ steps.vars.outputs.OPENSSL_BE }}"
-      OPENSSL_SUB: "${{ steps.vars.outputs.OPENSSL_SUB }}"
       OPENSSL_BUILDENV_VERSION: "${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}"
       UNBOUND_IMAGE_VERSION: "${{ steps.vars.outputs.UNBOUND_IMAGE_VERSION }}"
 
@@ -49,9 +47,8 @@ jobs:
           fi
 
           UNBOUND_SHA256=$(curl -sL "$SHA_URL" | awk '{print $1}')
-          OPENSSL_BE=$(grep '^openssl=' versions/openssl-buildenv.txt | cut -d= -f2)
-          OPENSSL_SUB=$(grep '^sub=' versions/openssl-buildenv.txt | cut -d= -f2)
-          OPENSSL_BUILDENV_VERSION="${OPENSSL_BE}-${OPENSSL_SUB}"
+
+          OPENSSL_BUILDENV_VERSION=$(grep '^OPENSSL_BUILDENV_VERSION=' versions/openssl-buildenv.txt | cut -d= -f2)
 
           UNBOUND_SUB=$(grep '^sub=' versions/unbound-docker-image.txt | cut -d= -f2)
           UNBOUND_IMAGE_VERSION="${UNBOUND_VERSION}-${UNBOUND_SUB}"
@@ -60,8 +57,6 @@ jobs:
             echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
             echo "UNBOUND_VERSION=${UNBOUND_VERSION}"
             echo "UNBOUND_SHA256=${UNBOUND_SHA256}"
-            echo "OPENSSL_BE=${OPENSSL_BE}"
-            echo "OPENSSL_SUB=${OPENSSL_SUB}"
             echo "OPENSSL_BUILDENV_VERSION=${OPENSSL_BUILDENV_VERSION}"
             echo "UNBOUND_IMAGE_VERSION=${UNBOUND_IMAGE_VERSION}"
           } >> "$GITHUB_OUTPUT"

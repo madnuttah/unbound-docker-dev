@@ -17,9 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       IMAGE_BUILD_DATE: "${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
-      OPENSSL_QUIC_BE: "${{ steps.vars.outputs.OPENSSL_QUIC_BE }}"
-      OPENSSL_QUIC_SUB: "${{ steps.vars.outputs.OPENSSL_QUIC_SUB }}"
       OPENSSL_QUIC_BUILDENV_VERSION: "${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}"
+
 
     steps:
       - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
@@ -38,15 +37,10 @@ jobs:
           
           echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
 
-          OPENSSL_QUIC_BE=$(grep '^openssl=' versions/openssl-quic-buildenv.txt | cut -d= -f2)
-          OPENSSL_QUIC_SUB=$(grep '^sub=' versions/openssl-quic-buildenv.txt | cut -d= -f2)
-          OPENSSL_QUIC_BUILDENV_VERSION="${OPENSSL_QUIC_BE}-${OPENSSL_QUIC_SUB}-quic"
-          
-          {
-            echo "OPENSSL_QUIC_BE=${OPENSSL_QUIC_BE}"
-            echo "OPENSSL_QUIC_SUB=${OPENSSL_QUIC_SUB}"
-            echo "OPENSSL_QUIC_BUILDENV_VERSION=${OPENSSL_QUIC_BUILDENV_VERSION}"
-          } >> "$GITHUB_OUTPUT"
+          OPENSSL_QUIC_BUILDENV_VERSION=$(grep '^OPENSSL_QUIC_BUILDENV_VERSION=' versions/openssl-quic-buildenv.txt | cut -d= -f2)
+
+          echo "OPENSSL_QUIC_BUILDENV_VERSION=${OPENSSL_QUIC_BUILDENV_VERSION}" >> "$GITHUB_OUTPUT"
+
 
   build:
     needs: buildvars
