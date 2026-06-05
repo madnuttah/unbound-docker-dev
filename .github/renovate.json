@@ -33,6 +33,7 @@
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "openssl-buildenv",
       "packageNameTemplate": "madnuttah/openssl-buildenv",
+      "extractVersionTemplate": "^v(?<version>.*)$",
       "versioningTemplate": "semver"
     },
     {
@@ -54,6 +55,7 @@
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "openssl-quic-buildenv",
       "packageNameTemplate": "madnuttah/openssl-buildenv",
+      "extractVersionTemplate": "^v(?<version>.*)$",
       "versioningTemplate": "semver"
     },
     {
