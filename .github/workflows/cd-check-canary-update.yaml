@@ -3,8 +3,8 @@
 name: CD Check Canary Update
 
 on:
-  schedule:
-    - cron: "0 19 * * mon-fri"
+#  schedule:
+#    - cron: "0 19 * * mon-fri"
   workflow_dispatch:
 
 permissions:
