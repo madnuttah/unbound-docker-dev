@@ -41,14 +41,14 @@ jobs:
         run: |
           set -euo pipefail
           
-          REMOTE_SHA="$(git ls-remote https://github.com/NLnetLabs/unbound.git HEAD | cut -f1)" || exit 1
+          REMOTE_SHA="$(git ls-remote "https://github.com/NLnetLabs/unbound.git" HEAD | cut -f1)" || exit 1
           
           if [ -z "$REMOTE_SHA" ]; then
             echo "ERROR: Could not fetch remote HEAD SHA" >&2
             exit 1
           fi
 
-          CURRENT_SHA="$(cat versions/unbound-git-sha.txt 2>/dev/null || echo '')"
+          CURRENT_SHA="$(cat "versions/unbound-git-sha.txt" 2>/dev/null || echo '')"
 
           if [ "$CURRENT_SHA" = "$REMOTE_SHA" ]; then
             echo "No changes detected in upstream HEAD. Skipping build."
@@ -56,13 +56,13 @@ jobs:
           fi
 
           echo "HEAD SHA changed. Updating checkpoint and triggering builds."
-          echo "$REMOTE_SHA" > versions/unbound-git-sha.txt
+          printf '%s\n' "$REMOTE_SHA" > "versions/unbound-git-sha.txt"
           
           git config --local user.name "${{ steps.IMPORT_GPG.outputs.name }}"
           git config --local user.email "${{ steps.IMPORT_GPG.outputs.email }}"
 
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
 
-          git add versions/unbound-git-sha.txt
+          git add "versions/unbound-git-sha.txt"
           git commit -m "chore: checkpoint canary build git sha"
           git push
