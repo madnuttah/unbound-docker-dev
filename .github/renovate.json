@@ -22,7 +22,7 @@
       "versions/unbound\\.txt$"
     ],
     "matchStrings": [
-      "(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      "^(?<currentValue>\\d+\\.\\d+\\.\\d+)$"
     ],
     "datasourceTemplate": "github-tags",
     "packageNameTemplate": "NLnetLabs/unbound",
