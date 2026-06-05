@@ -1,2 +1,2 @@
-openssl=3.6.2
+openssl=3.6.1
 sub=6
