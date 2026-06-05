@@ -20,7 +20,7 @@
       "customType": "regex",
       "fileMatch": ["(^|/)versions/unbound\\.txt$"],
       "matchStrings": [
-        "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+        "(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
       ],
       "datasourceTemplate": "github-tags",
       "packageNameTemplate": "NLnetLabs/unbound",
@@ -31,7 +31,7 @@
       "customType": "regex",
       "fileMatch": ["(^|/)versions/openssl-buildenv\\.txt$"],
       "matchStrings": [
-        "^OPENSSL_BUILDENV_VERSION=(?<currentValue>.*)$"
+        "OPENSSL_BUILDENV_VERSION=(?<currentValue>.*)"
       ],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "openssl-buildenv",
@@ -42,7 +42,7 @@
       "customType": "regex",
       "fileMatch": ["(^|/)versions/openssl-quic-buildenv\\.txt$"],
       "matchStrings": [
-        "^OPENSSL_QUIC_BUILDENV_VERSION=(?<currentValue>.*)$"
+        "OPENSSL_QUIC_BUILDENV_VERSION=(?<currentValue>.*)"
       ],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "openssl-buildenv",
