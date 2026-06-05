@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - "versions/unbound-git-sha.txt"
-  workflow_dispatch:
 
 permissions:
   actions: read
