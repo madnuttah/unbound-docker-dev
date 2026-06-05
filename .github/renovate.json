@@ -11,10 +11,13 @@
   ],
   "timezone": "Europe/Berlin",
   "schedule": ["every weekday", "on saturday"],
+
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/(^|/)versions/unbound\\.txt$/"],
+      "managerFilePatterns": [
+        "/(^|/)versions/unbound\\.txt$/"
+      ],
       "matchStrings": [
         "(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
       ],
@@ -24,11 +27,14 @@
       "extractVersionTemplate": "^release-(?<version>.*)$",
       "versioningTemplate": "semver"
     },
+
     {
       "customType": "regex",
-      "managerFilePatterns": ["/(^|/)versions/openssl-buildenv\\.txt$/"],
+      "managerFilePatterns": [
+        "/(^|/)versions/openssl-buildenv\\.txt$/"
+      ],
       "matchStrings": [
-        "(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+\\-[0-9]+)"
+        "openssl=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+[a-z]?)"
       ],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "openssl-buildenv",
@@ -38,7 +44,9 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["/(^|/)versions/openssl-buildenv\\.txt$/"],
+      "managerFilePatterns": [
+        "/(^|/)versions/openssl-buildenv\\.txt$/"
+      ],
       "matchStrings": [
         "sub=(?<currentValue>[0-9]+)"
       ],
@@ -46,11 +54,14 @@
       "depNameTemplate": "dummy-openssl-subversion",
       "versioningTemplate": "semver"
     },
+
     {
       "customType": "regex",
-      "managerFilePatterns": ["/(^|/)versions/openssl-quic-buildenv\\.txt$/"],
+      "managerFilePatterns": [
+        "/(^|/)versions/openssl-quic-buildenv\\.txt$/"
+      ],
       "matchStrings": [
-        "(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+\\-[0-9]+)\\-quic"
+        "openssl=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+[a-z]?)"
       ],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "openssl-quic-buildenv",
@@ -60,7 +71,9 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["/(^|/)versions/openssl-quic-buildenv\\.txt$/"],
+      "managerFilePatterns": [
+        "/(^|/)versions/openssl-quic-buildenv\\.txt$/"
+      ],
       "matchStrings": [
         "sub=(?<currentValue>[0-9]+)"
       ],
@@ -69,6 +82,7 @@
       "versioningTemplate": "semver"
     }
   ],
+
   "packageRules": [
     {
       "matchManagers": ["dockerfile"],
@@ -79,6 +93,7 @@
       "pinDigests": true,
       "automerge": true
     },
+
     {
       "description": "Increment OpenSSL buildenv subversion on dependency changes",
       "matchFileNames": ["versions/openssl-buildenv.txt"],
