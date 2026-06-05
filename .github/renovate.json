@@ -28,6 +28,28 @@
 
     {
       "customType": "regex",
+      "managerFilePatterns": ["/(^|/)versions/openssl-buildenv\\.txt$/"],
+      "matchStrings": [
+        "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+\\-[0-9]+)$"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "madnuttah/openssl-buildenv",
+      "versioningTemplate": "semver"
+    },
+
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)versions/openssl-quic-buildenv\\.txt$/"],
+      "matchStrings": [
+        "^(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+\\-[0-9]+)\\-quic$"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "madnuttah/openssl-buildenv",
+      "versioningTemplate": "semver"
+    },
+
+    {
+      "customType": "regex",
       "managerFilePatterns": ["/(^|/)versions/unbound-docker-image\\.txt$/"],
       "matchStrings": [
         "unbound=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
