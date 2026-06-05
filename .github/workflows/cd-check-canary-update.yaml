@@ -1,5 +1,3 @@
-# .github/workflows/cd-check-canary-update.yaml
-
 name: CD Check Canary Update
 
 on:

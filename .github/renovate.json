@@ -15,47 +15,53 @@
     "on saturday"
   ],
 
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "versions/unbound\\.txt$"
-      ],
-      "matchStrings": [
-        "^(?<currentValue>\\d+\\.\\d+\\.\\d+)$"
-      ],
-      "datasourceTemplate": "github-tags",
-      "packageNameTemplate": "NLnetLabs/unbound",
-      "extractVersionTemplate": "^release-(?<version>\\d+\\.\\d+\\.\\d+)$",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "versions/openssl-buildenv\\.txt$"
-      ],
-      "matchStrings": [
-        "^OPENSSL_BUILDENV_VERSION=(?<currentValue>.*)$"
-      ],
-      "datasourceTemplate": "github-releases",
-      "packageNameTemplate": "madnuttah/openssl-buildenv",
-      "extractVersionTemplate": "^v(?<version>.*)$",
-      "versioningTemplate": "loose"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "versions/openssl-quic-buildenv\\.txt$"
-      ],
-      "matchStrings": [
-        "^OPENSSL_QUIC_BUILDENV_VERSION=(?<currentValue>.*)$"
-      ],
-      "datasourceTemplate": "github-releases",
-      "packageNameTemplate": "madnuttah/openssl-buildenv",
-      "extractVersionTemplate": "^v(?<version>.*)$",
-      "versioningTemplate": "loose"
-    }
-  ],
+"customManagers": [
+  {
+    "enabled": true,
+    "customType": "regex",
+    "managerFilePatterns": [
+      "versions/unbound\\.txt$"
+    ],
+    "matchStrings": [
+      "^(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s*$"
+    ],
+    "datasourceTemplate": "github-tags",
+    "packageNameTemplate": "NLnetLabs/unbound",
+
+    // stable only
+    "extractVersionTemplate": "^release-(?<version>\\d+\\.\\d+\\.\\d+)$",
+
+    "versioningTemplate": "semver"
+  },
+  {
+    "enabled": true,
+    "customType": "regex",
+    "managerFilePatterns": [
+      "versions/openssl-buildenv\\.txt$"
+    ],
+    "matchStrings": [
+      "^OPENSSL_BUILDENV_VERSION=(?<currentValue>[^\\s]+)"
+    ],
+    "datasourceTemplate": "github-releases",
+    "packageNameTemplate": "madnuttah/openssl-buildenv",
+    "extractVersionTemplate": "^v(?<version>.*)$",
+    "versioningTemplate": "loose"
+  },
+  {
+    "enabled": true,
+    "customType": "regex",
+    "managerFilePatterns": [
+      "versions/openssl-quic-buildenv\\.txt$"
+    ],
+    "matchStrings": [
+      "^OPENSSL_QUIC_BUILDENV_VERSION=(?<currentValue>[^\\s]+)"
+    ],
+    "datasourceTemplate": "github-releases",
+    "packageNameTemplate": "madnuttah/openssl-buildenv",
+    "extractVersionTemplate": "^v(?<version>.*)$",
+    "versioningTemplate": "loose"
+  }
+],
 
   "packageRules": [
     {
