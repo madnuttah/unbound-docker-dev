@@ -57,7 +57,7 @@ jobs:
       - name: Pull image
         run: docker pull "$IMAGE_TAG" || true
 
-      - name: Start container (old logic, new workflow)
+      - name: Start container
         run: |
           if [[ "$IMAGE_TAG" == *"-quic" ]]; then
             docker run -d --name unbound-dns -p 5335:5335/udp "$IMAGE_TAG" || true
@@ -65,7 +65,7 @@ jobs:
             docker run -d --name unbound-dns -p 5335:5335/udp "$IMAGE_TAG"
           fi
           
-      - name: Wait for Unbound readiness (old logic, improved)
+      - name: Wait for Unbound readiness
         run: |
           for i in {1..20}; do
             : "$i"
@@ -77,7 +77,7 @@ jobs:
           docker logs unbound-dns
           exit 1
 
-      - name: DNS test (old logic)
+      - name: DNS test
         run: |
           if [[ "$IMAGE_TAG" == *"-quic" ]]; then
             timeout 10s docker exec unbound-dns drill cloudflare.com A || true

@@ -103,8 +103,8 @@ RUN set -xe; \
   gpg --verify /usr/local/unbound/iana.d/root.hints.sig /usr/local/unbound/iana.d/root.hints && \
   gpg --verify /usr/local/unbound/iana.d/root.zone.sig /usr/local/unbound/iana.d/root.zone && \
   /usr/local/unbound/sbin/unbound-anchor -v -a /usr/local/unbound/iana.d/root.key || true && \
-  pkill -9 gpg-agent || true && \
-  pkill -9 dirmngr || true
+  pkill -9 gpg-agent && \
+  pkill -9 dirmngr
 
 COPY ./unbound/root/*.sh \
   /usr/local/unbound/sbin/
