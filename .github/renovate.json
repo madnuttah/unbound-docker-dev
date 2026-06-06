@@ -67,6 +67,12 @@
       "pinDigests": true,
       "automerge": true
     },
+
+    {
+      "matchManagers": ["custom.regex"],
+      "separateMinorPatch": false
+    },
+
     {
       "matchManagers": ["custom.regex"],
       "automerge": true,
