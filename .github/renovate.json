@@ -66,6 +66,11 @@
       "matchManagers": ["github-actions"],
       "pinDigests": true,
       "automerge": true
+    },
+    {
+      "matchManagers": ["regex"],
+      "automerge": true,
+      "automergeType": "branch"
     }
   ]
 }
