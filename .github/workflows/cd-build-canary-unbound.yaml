@@ -28,7 +28,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-
+          
       - name: Set buildvars
         id: vars
         run: |
@@ -37,12 +37,16 @@ jobs:
           IMAGE_BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           echo "IMAGE_BUILD_DATE=$IMAGE_BUILD_DATE" >> "$GITHUB_OUTPUT"
 
-          UNBOUND_VERSION="$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
-            | awk -F\"'\" '/^PACKAGE_VERSION=/ { print $2 }')"
+          UNBOUND_VERSION="$(
+            curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
+              | awk -F'"' '/^PACKAGE_VERSION=/ { print $2 }'
+          )"
           echo "UNBOUND_VERSION=$UNBOUND_VERSION" >> "$GITHUB_OUTPUT"
 
-          OPENSSL_BUILDENV_VERSION="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
-            | jq -r '[.[] | select(.prerelease == false)][0].name')-quic"
+          OPENSSL_BUILDENV_VERSION="$(
+            curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
+              | jq -r '[.[] | select(.prerelease == false)][0].name'
+          )-quic"
           echo "OPENSSL_BUILDENV_VERSION=$OPENSSL_BUILDENV_VERSION" >> "$GITHUB_OUTPUT"
 
   build:
