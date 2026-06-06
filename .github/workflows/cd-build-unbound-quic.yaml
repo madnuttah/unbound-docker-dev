@@ -67,6 +67,14 @@ jobs:
             echo "OPENSSL_QUIC_BUILDENV_VERSION=${OPENSSL_QUIC_BUILDENV_VERSION}"
             echo "UNBOUND_QUIC_IMAGE_VERSION=${UNBOUND_QUIC_IMAGE_VERSION}"
           } >> "$GITHUB_OUTPUT"
+          
+      - name: Show build variables
+        run: |
+          echo "IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
+          echo "UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}"
+          echo "UNBOUND_SHA256=${{ steps.vars.outputs.UNBOUND_SHA256 }}"
+          echo "OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}"
+          echo "UNBOUND_IMAGE_VERSION=${{ steps.vars.outputs.UNBOUND_IMAGE_VERSION }}"
 
   build:
     if: github.actor == 'renovate[bot]'
