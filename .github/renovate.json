@@ -68,7 +68,7 @@
       "automerge": true
     },
     {
-      "matchManagers": ["regex"],
+      "matchManagers": ["custom.regex"],
       "automerge": true,
       "automergeType": "branch"
     }
