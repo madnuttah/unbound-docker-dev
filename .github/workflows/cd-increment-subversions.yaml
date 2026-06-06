@@ -3,6 +3,8 @@ name: CD Increment Unbound Subversions
 on:
   pull_request:
     types: [opened, synchronize]
+    branches:
+      - main
 
 permissions:
   contents: write
