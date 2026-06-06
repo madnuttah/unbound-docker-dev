@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       IMAGE_BUILD_DATE: "${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
+      UNBOUND_VERSION: "${{ steps.vars.outputs.UNBOUND_VERSION }}"
       OPENSSL_QUIC_BUILDENV_VERSION: "${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}"
-
 
     steps:
       - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
@@ -33,12 +33,14 @@ jobs:
         id: vars
         run: |
           set -euo pipefail
-          
+
           echo "IMAGE_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_OUTPUT"
 
-          OPENSSL_QUIC_BUILDENV_VERSION=$(grep '^OPENSSL_QUIC_BUILDENV_VERSION=' versions/openssl-quic-buildenv.txt | cut -d= -f2)
+          echo "UNBOUND_VERSION=$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
+            | awk -F\"'\" '/^PACKAGE_VERSION=/ { print $2 }')" >> "$GITHUB_OUTPUT"
 
-          echo "OPENSSL_QUIC_BUILDENV_VERSION=${OPENSSL_QUIC_BUILDENV_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "OPENSSL_QUIC_BUILDENV_VERSION=$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
+            | jq -r '[.[] | select(.prerelease == false)][0].name')-quic" >> "$GITHUB_OUTPUT"
 
   build:
     needs: buildvars
@@ -60,7 +62,7 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
-          fetch-depth: 0
+        fetch-depth: 0
 
       - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
 
@@ -86,6 +88,7 @@ jobs:
 
           build-args: |
             IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
+            UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
             OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           sbom: ${{ github.event_name != 'pull_request' }}
