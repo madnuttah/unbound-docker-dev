@@ -20,6 +20,7 @@ permissions:
 
 jobs:
   buildvars:
+    if: github.actor == 'renovate[bot]'
     runs-on: ubuntu-latest
     outputs:
       IMAGE_BUILD_DATE: "${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
@@ -68,6 +69,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   build:
+    if: github.actor == 'renovate[bot]'
     needs: buildvars
     runs-on: ubuntu-latest
 
