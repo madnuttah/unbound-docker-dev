@@ -2,9 +2,15 @@ name: CD Build Unbound Docker Image
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "versions/unbound.txt"
       - "versions/openssl-buildenv.txt"
+
+concurrency:
+  group: cd-build-unbound
+  cancel-in-progress: true
 
 permissions:
   actions: read
