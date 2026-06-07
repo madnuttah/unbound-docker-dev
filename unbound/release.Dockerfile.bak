@@ -58,7 +58,6 @@ RUN set -xe; \
 WORKDIR /tmp/src/unbound-${UNBOUND_VERSION}
 
 RUN set -xe; \
-  echo ">>> START CONFIGURE at $(date -u)" && \
   ./configure \
     --prefix=/usr/local/unbound/unbound.d \
     --with-run-dir=/usr/local/unbound/unbound.d \
@@ -84,21 +83,7 @@ RUN set -xe; \
     --enable-tfo-client \
     --enable-pie \
     --enable-relro-now && \
-  \
-  echo ">>> DETECTING CPU COUNT at $(date -u)" && \
-  NPROC="$(nproc)" && \
-  if [ "$(uname -m)" = "riscv64" ]; then \
-      MAKEFLAGS="-j1"; \
-      echo ">>> RISCV64 detected, forcing MAKEFLAGS=${MAKEFLAGS}"; \
-  else \
-      MAKEFLAGS="-j${NPROC}"; \
-      echo ">>> Non-riscv64, using MAKEFLAGS=${MAKEFLAGS}"; \
-  fi && \
-  \
-  echo ">>> START MAKE at $(date -u)" && \
-  make ${MAKEFLAGS} && \
-  echo ">>> END MAKE at $(date -u)" && \
-  \
+  make -j"$(nproc)" && \
   make install && \
   apk del --no-cache .build-deps && \
   mkdir -p /usr/local/unbound/iana.d && \
