@@ -96,7 +96,7 @@ RUN set -xe; \
   fi && \
   \
   echo ">>> START MAKE at $(date -u)" && \
-  make ${MAKEFLAGS} && \
+  make "${MAKEFLAGS}" && \
   echo ">>> END MAKE at $(date -u)" && \
   \
   make install && \
