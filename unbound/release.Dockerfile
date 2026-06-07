@@ -84,43 +84,43 @@ RUN set -xe; \
     --enable-tfo-client \
     --enable-pie \
     --enable-relro-now && \
-  \
-  echo ">>> DETECTING CPU COUNT at $(date -u)" && \
-  NPROC="$(nproc)" && \
-  if [ "$(uname -m)" = "riscv64" ]; then \
-      MAKEFLAGS="-j1"; \
-      echo ">>> RISCV64 detected, forcing MAKEFLAGS=${MAKEFLAGS}"; \
-  else \
-      MAKEFLAGS="-j${NPROC}"; \
-      echo ">>> Non-riscv64, using MAKEFLAGS=${MAKEFLAGS}"; \
-  fi && \
-  \
-  echo ">>> START MAKE at $(date -u)" && \
-  make "${MAKEFLAGS}" && \
-  echo ">>> END MAKE at $(date -u)" && \
-  \
-  make install && \
-  apk del --no-cache .build-deps && \
-  mkdir -p /usr/local/unbound/iana.d && \
-  curl -sSL https://www.internic.net/domain/named.cache -o /usr/local/unbound/iana.d/root.hints && \
-  curl -sSL https://www.internic.net/domain/named.cache.md5 -o /usr/local/unbound/iana.d/root.hints.md5 && \
-  curl -sSL https://www.internic.net/domain/named.cache.sig -o /usr/local/unbound/iana.d/root.hints.sig && \
-  ROOT_HINTS_MD5="$(cat /usr/local/unbound/iana.d/root.hints.md5)" && \
-  echo "${ROOT_HINTS_MD5} */usr/local/unbound/iana.d/root.hints" | md5sum -c - && \
-  curl -sSL https://www.internic.net/domain/root.zone -o /usr/local/unbound/iana.d/root.zone && \
-  curl -sSL https://www.internic.net/domain/root.zone.md5 -o /usr/local/unbound/iana.d/root.zone.md5 && \
-  curl -sSL https://www.internic.net/domain/root.zone.sig -o /usr/local/unbound/iana.d/root.zone.sig && \
-  ROOT_ZONE_MD5="$(cat /usr/local/unbound/iana.d/root.zone.md5)" && \
-  echo "${ROOT_ZONE_MD5} */usr/local/unbound/iana.d/root.zone" | md5sum -c - && \
-  GNUPGHOME="$(mktemp -d)" && \
-  export GNUPGHOME && \
-  ( gpg --no-tty --keyserver hkps://keyserver.ubuntu.com --recv-keys "$INTERNIC_PGP" \
-    || gpg --no-tty --keyserver hkps://pgp.surf.nl --recv-keys "$INTERNIC_PGP" ) && \
-  gpg --verify /usr/local/unbound/iana.d/root.hints.sig /usr/local/unbound/iana.d/root.hints && \
-  gpg --verify /usr/local/unbound/iana.d/root.zone.sig /usr/local/unbound/iana.d/root.zone && \
-  /usr/local/unbound/sbin/unbound-anchor -v -a /usr/local/unbound/iana.d/root.key || true && \
-  pkill -9 gpg-agent && \
-  pkill -9 dirmngr
+    \
+    echo ">>> DETECTING CPU COUNT at $(date -u)" && \
+    NPROC="$(nproc)" && \
+    if [ "$(uname -m)" = "riscv64" ]; then \
+        MAKEFLAGS="-j1"; \
+        echo ">>> RISCV64 detected, forcing MAKEFLAGS=${MAKEFLAGS}"; \
+    else \
+        MAKEFLAGS="-j${NPROC}"; \
+        echo ">>> Non-riscv64, using MAKEFLAGS=${MAKEFLAGS}"; \
+    fi && \
+    \
+    echo ">>> START MAKE at $(date -u)" && \
+    make "${MAKEFLAGS}" && \
+    echo ">>> END MAKE at $(date -u)" && \
+    \
+    make install && \
+    apk del --no-cache .build-deps && \
+    mkdir -p /usr/local/unbound/iana.d && \
+    curl -sSL https://www.internic.net/domain/named.cache -o /usr/local/unbound/iana.d/root.hints && \
+    curl -sSL https://www.internic.net/domain/named.cache.md5 -o /usr/local/unbound/iana.d/root.hints.md5 && \
+    curl -sSL https://www.internic.net/domain/named.cache.sig -o /usr/local/unbound/iana.d/root.hints.sig && \
+    ROOT_HINTS_MD5="$(cat /usr/local/unbound/iana.d/root.hints.md5)" && \
+    echo "${ROOT_HINTS_MD5} */usr/local/unbound/iana.d/root.hints" | md5sum -c - && \
+    curl -sSL https://www.internic.net/domain/root.zone -o /usr/local/unbound/iana.d/root.zone && \
+    curl -sSL https://www.internic.net/domain/root.zone.md5 -o /usr/local/unbound/iana.d/root.zone.md5 && \
+    curl -sSL https://www.internic.net/domain/root.zone.sig -o /usr/local/unbound/iana.d/root.zone.sig && \
+    ROOT_ZONE_MD5="$(cat /usr/local/unbound/iana.d/root.zone.md5)" && \
+    echo "${ROOT_ZONE_MD5} */usr/local/unbound/iana.d/root.zone" | md5sum -c - && \
+    GNUPGHOME="$(mktemp -d)" && \
+    export GNUPGHOME && \
+    ( gpg --no-tty --keyserver hkps://keyserver.ubuntu.com --recv-keys "$INTERNIC_PGP" \
+      || gpg --no-tty --keyserver hkps://pgp.surf.nl --recv-keys "$INTERNIC_PGP" ) && \
+    gpg --verify /usr/local/unbound/iana.d/root.hints.sig /usr/local/unbound/iana.d/root.hints && \
+    gpg --verify /usr/local/unbound/iana.d/root.zone.sig /usr/local/unbound/iana.d/root.zone && \
+    /usr/local/unbound/sbin/unbound-anchor -v -a /usr/local/unbound/iana.d/root.key || true && \
+    pkill -9 gpg-agent && \
+    pkill -9 dirmngr
 
 COPY ./unbound/root/*.sh /usr/local/unbound/sbin/
 COPY ./unbound/root/entrypoint /entrypoint
