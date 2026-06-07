@@ -15,7 +15,11 @@
     "on saturday",
     "on sunday",
   ],
-
+  "automergeType": "branch",
+  "automerge": true,
+  "automergeStrategy": "merge-commit",
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0
   "customManagers": [
     {
       "customType": "regex",
