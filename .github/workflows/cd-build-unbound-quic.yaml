@@ -118,9 +118,14 @@ jobs:
           file: "unbound/release_quic.Dockerfile"
 
           platforms: |
-            linux/amd64,linux/arm64,linux/386,
-            linux/arm/v6,linux/arm/v7,
-            linux/ppc64le,linux/s390x,linux/riscv64
+            linux/amd64
+   #         linux/arm/v6,linux/arm/v7,
+  #          linux/ppc64le,linux/s390x,linux/riscv64
+
+ #         platforms: |
+ #           linux/amd64,linux/arm64,linux/386,
+ #           linux/arm/v6,linux/arm/v7,
+ #           linux/ppc64le,linux/s390x,linux/riscv64
 
           push: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
