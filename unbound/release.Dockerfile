@@ -84,21 +84,18 @@ RUN set -xe; \
     --enable-tfo-client \
     --enable-pie \
     --enable-relro-now && \
-  \
   echo ">>> DETECTING CPU COUNT at $(date -u)" && \
   NPROC="$(nproc)" && \
   if [ "$(uname -m)" = "riscv64" ]; then \
-      MAKEFLAGS="-j1"; \
-      echo ">>> RISCV64 detected, forcing MAKEFLAGS=${MAKEFLAGS}"; \
+    MAKEFLAGS="-j1"; \
+    echo ">>> RISCV64 detected, forcing MAKEFLAGS=${MAKEFLAGS}"; \
   else \
-      MAKEFLAGS="-j${NPROC}"; \
-      echo ">>> Non-riscv64, using MAKEFLAGS=${MAKEFLAGS}"; \
+    MAKEFLAGS="-j${NPROC}"; \
+    echo ">>> Non-riscv64, using MAKEFLAGS=${MAKEFLAGS}"; \
   fi && \
-  \
   echo ">>> START MAKE at $(date -u)" && \
   make "${MAKEFLAGS}" && \
   echo ">>> END MAKE at $(date -u)" && \
-  \
   make install && \
   apk del --no-cache .build-deps && \
   mkdir -p /usr/local/unbound/iana.d && \
