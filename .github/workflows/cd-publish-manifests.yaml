@@ -76,10 +76,12 @@ jobs:
             STABLE_QUIC_VERSION=$(cat unbound-quic-version/version.txt)
           fi
 
-          echo "STABLE_VERSION=${STABLE_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "STABLE_QUIC_VERSION=${STABLE_QUIC_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "CANARY=${CANARY}" >> "$GITHUB_OUTPUT"
-          echo "CANARY_QUIC=${CANARY_QUIC}" >> "$GITHUB_OUTPUT"
+          {
+            echo "STABLE_VERSION=${STABLE_VERSION}"
+            echo "STABLE_QUIC_VERSION=${STABLE_QUIC_VERSION}"
+            echo "CANARY=${CANARY}"
+            echo "CANARY_QUIC=${CANARY_QUIC}"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
