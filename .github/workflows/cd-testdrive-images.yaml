@@ -37,7 +37,7 @@ jobs:
 
       - name: Determine image tag
         run: |
-          VARIANT=$(cat variant/variant.txt)
+          VARIANT=$(cat variant.txt)
 
           case "$VARIANT" in
             stable)
