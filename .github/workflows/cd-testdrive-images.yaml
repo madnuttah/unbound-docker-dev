@@ -72,7 +72,7 @@ jobs:
             exit 1
           fi
 
-          echo "VARIANT=$VARIANT" >> $GITHUB_ENV
+          echo "VARIANT=$VARIANT" >> "$GITHUB_ENV"
 
       - name: Determine image tag
         run: |
@@ -110,7 +110,7 @@ jobs:
 
       - name: Wait for Unbound readiness
         run: |
-          for i in {1..20}; do
+          for _ in {1..20}; do
             if docker logs unbound-dns 2>&1 | grep -q "start of service"; then
               exit 0
             fi
