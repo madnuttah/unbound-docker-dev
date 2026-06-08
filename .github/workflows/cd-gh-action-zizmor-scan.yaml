@@ -2,10 +2,10 @@ name: CD GitHub Actions Security Analysis with zizmor
 
 on:
   workflow_dispatch:
-#  push:
-#    branches: ["main"]
-#  pull_request:
-#    branches: ["**"]
+ push:
+   branches: ["main"]
+ pull_request:
+   branches: ["**"]
 
 jobs:
   zizmor:
