@@ -1,4 +1,6 @@
 name: CD Publish Unbound Manifests
+
+on:
   workflow_run:
     workflows:
       - CD Testdrive Unbound Docker Images
