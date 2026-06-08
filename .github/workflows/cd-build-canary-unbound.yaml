@@ -34,15 +34,16 @@ jobs:
         id: vars
         run: |
           set -euo pipefail
+          {
+            IMAGE_BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "IMAGE_BUILD_DATE=$IMAGE_BUILD_DATE"
 
-          IMAGE_BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          echo "IMAGE_BUILD_DATE=$IMAGE_BUILD_DATE" >> "$GITHUB_OUTPUT"
+            echo "UNBOUND_VERSION=$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
+              | awk -F= '/^version=/ { print $2 }')"
 
-          echo "UNBOUND_VERSION=$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
-            | awk -F= '/^version=/ { print $2 }')" >> "$GITHUB_OUTPUT"
-
-          echo OPENSSL_BUILDENV_VERSION="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
-            | jq -r '[.[] | select(.prerelease == false)][0].name')" >> "$GITHUB_OUTPUT"
+            echo "OPENSSL_BUILDENV_VERSION=$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
+              | jq -r '[.[] | select(.prerelease == false)][0].name')"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Show build variables
         run: |
