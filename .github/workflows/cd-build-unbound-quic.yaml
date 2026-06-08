@@ -73,27 +73,15 @@ jobs:
           echo "IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
           echo "UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}"
           echo "UNBOUND_SHA256=${{ steps.vars.outputs.UNBOUND_SHA256 }}"
-          echo "OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}"
-          echo "UNBOUND_IMAGE_VERSION=${{ steps.vars.outputs.UNBOUND_IMAGE_VERSION }}"
+          echo "OPENSSL_QUIC_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}"
+          echo "UNBOUND_QUIC_IMAGE_VERSION=${{ steps.vars.outputs.UNBOUND_QUIC_IMAGE_VERSION }}"
+
 
   build:
     if: github.actor == 'renovate[bot]'
     needs: buildvars
     runs-on: ubuntu-latest
     
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-          - linux/386
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/ppc64le
-          - linux/s390x
-          - linux/riscv64
-
     permissions:
       contents: read
       packages: write
@@ -122,13 +110,6 @@ jobs:
         with:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
-          
-      - name: Normalize platform
-        id: normalize
-        run: |
-          SAFE="${{ matrix.platform }}"
-          SAFE="${SAFE//\//-}"
-          echo "SAFE_PLATFORM=$SAFE" >> "$GITHUB_OUTPUT"
 
       - name: Build and push QUIC image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
@@ -137,7 +118,15 @@ jobs:
           builder: "${{ steps.buildx.outputs.name }}"
           file: "unbound/release_quic.Dockerfile"
 
-          platforms: ${{ matrix.platform }}
+          platforms: |
+            linux/amd64
+            linux/arm64
+            linux/386
+            linux/arm/v6
+            linux/arm/v7
+            linux/ppc64le
+            linux/s390x
+            linux/riscv64
 
           push: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
@@ -151,10 +140,10 @@ jobs:
             OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic-${{ steps.normalize.outputs.SAFE_PLATFORM }}
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic
 
           cache-to: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic-${{ steps.normalize.outputs.SAFE_PLATFORM }},mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic,mode=max
 
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_QUIC_IMAGE_VERSION }}-quic

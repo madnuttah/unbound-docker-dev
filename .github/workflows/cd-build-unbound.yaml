@@ -116,16 +116,16 @@ jobs:
           context: .
           builder: "${{ steps.buildx.outputs.name }}"
           file: "unbound/release.Dockerfile"
-
-        platforms: |
-          linux/amd64
-          linux/arm64
-          linux/386
-          linux/arm/v6
-          linux/arm/v7
-          linux/ppc64le
-          linux/s390x
-          linux/riscv64
+          
+          platforms: |
+            linux/amd64
+            linux/arm64
+            linux/386
+            linux/arm/v6
+            linux/arm/v7
+            linux/ppc64le
+            linux/s390x
+            linux/riscv64
 
           push: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
@@ -139,10 +139,10 @@ jobs:
             OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}
 
           cache-from: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ steps.normalize.outputs.SAFE_PLATFORM }}
-
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache
+            
           cache-to: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ steps.normalize.outputs.SAFE_PLATFORM }},mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcachee,mode=max
 
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_IMAGE_VERSION }}
