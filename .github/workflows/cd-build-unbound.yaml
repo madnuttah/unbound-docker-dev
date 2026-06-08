@@ -162,3 +162,6 @@ jobs:
 
       - name: Upload variant
         uses: actions/upload-artifact@043fb46d1a93c77
+        with:
+          name: variant
+          path: variant.txt

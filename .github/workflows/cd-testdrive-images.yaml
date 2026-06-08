@@ -26,9 +26,12 @@ jobs:
           egress-policy: audit
 
       - name: Download variant
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          name: variant
+          name: ${{ github.event.workflow_run.name == 'CD Build Unbound Docker Image' && 'stable' ||
+                    github.event.workflow_run.name == 'CD Build Unbound QUIC Docker Image' && 'stable-quic' ||
+                    github.event.workflow_run.name == 'CD Build Canary Unbound Docker Image' && 'canary' ||
+                    github.event.workflow_run.name == 'CD Build Canary Unbound QUIC Docker Image' && 'canary-quic' }}
           repository: ${{ github.repository }}
           run-id: ${{ github.event.workflow_run.id }}
 
