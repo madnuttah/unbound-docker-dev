@@ -7,6 +7,7 @@ on:
     paths:
       - "versions/unbound.txt"
       - "versions/openssl-buildenv.txt"
+  workflow_dispatch:
 
 concurrency:
   group: cd-build-unbound
@@ -19,6 +20,7 @@ permissions:
   id-token: write
 
 jobs:
+
   buildvars:
     if: github.actor == 'renovate[bot]'
     runs-on: ubuntu-latest
@@ -30,11 +32,11 @@ jobs:
       UNBOUND_IMAGE_VERSION: "${{ steps.vars.outputs.UNBOUND_IMAGE_VERSION }}"
 
     steps:
-      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -81,53 +83,61 @@ jobs:
     needs: buildvars
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: arm64
+            platform: linux/arm64
+          - arch: 386
+            platform: linux/386
+          - arch: armv6
+            platform: linux/arm/v6
+          - arch: armv7
+            platform: linux/arm/v7
+          - arch: ppc64le
+            platform: linux/ppc64le
+          - arch: s390x
+            platform: linux/s390x
+          - arch: riscv64
+            platform: linux/riscv64
 
     env:
       DOCKERHUB_SLUG: "madnuttah/unbound-dev"
 
     steps:
-      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
+      - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3
 
-      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5
         id: buildx
 
-      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
+      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
         if: github.event_name != 'pull_request'
         with:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
-          
-      - name: Build and push release image
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
+
+      - name: Build and push arch image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf
         with:
           context: .
           builder: "${{ steps.buildx.outputs.name }}"
           file: "unbound/release.Dockerfile"
-          
-          platforms: |
-            linux/amd64
-            linux/arm64
-            linux/386
-            linux/arm/v6
-            linux/arm/v7
-            linux/ppc64le
-            linux/s390x
-            linux/riscv64
 
-          push: ${{ github.event_name != 'pull_request' }}
+          platforms: ${{ matrix.platform }}
+          push: true
+
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
 
@@ -139,20 +149,16 @@ jobs:
             OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}
 
           cache-from: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache
-            
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ matrix.arch }}
+
           cache-to: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcachee,mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-${{ matrix.arch }},mode=max
 
           tags: |
-            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_IMAGE_VERSION }}
-            ${{ env.DOCKERHUB_SLUG }}:latest
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_IMAGE_VERSION }}-${{ matrix.arch }}
 
       - name: Write variant
         run: echo "stable" > variant.txt
 
       - name: Upload variant
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: variant
-          path: variant.txt
+        uses: actions/upload-artifact@043fb46d1a93c77

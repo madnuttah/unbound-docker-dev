@@ -21,11 +21,11 @@ jobs:
       UNBOUND_VERSION: "${{ steps.vars.outputs.UNBOUND_VERSION }}"
 
     steps:
-      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -45,7 +45,6 @@ jobs:
           echo "UNBOUND_VERSION=$UNBOUND_VERSION" >> "$GITHUB_OUTPUT"
 
           RESP=$(curl -fsSL https://api.github.com/repos/madnuttah/openssl-buildenv/releases)
-
           echo "$RESP" | jq empty
 
           OPENSSL_BUILDENV_VERSION=$(
@@ -59,7 +58,6 @@ jobs:
 
           echo "OPENSSL_BUILDENV_VERSION=$OPENSSL_BUILDENV_VERSION" >> "$GITHUB_OUTPUT"
 
-
       - name: Show build variables
         run: |
           echo "IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
@@ -69,6 +67,27 @@ jobs:
   build:
     needs: buildvars
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: arm64
+            platform: linux/arm64
+          - arch: 386
+            platform: linux/386
+          - arch: armv6
+            platform: linux/arm/v6
+          - arch: armv7
+            platform: linux/arm/v7
+          - arch: ppc64le
+            platform: linux/ppc64le
+          - arch: s390x
+            platform: linux/s390x
+          - arch: riscv64
+            platform: linux/riscv64
     
     permissions:
       contents: read
@@ -79,42 +98,35 @@ jobs:
       DOCKERHUB_SLUG: "madnuttah/unbound-dev"
 
     steps:
-      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
+      - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3
 
-      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5
         id: buildx
 
-      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
+      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
         if: github.event_name != 'pull_request'
         with:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
 
-      - name: Build and push
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
+      - name: Build and push arch image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf
         with:
           context: .
           builder: "${{ steps.buildx.outputs.name }}"
           file: ./unbound/canary.Dockerfile
 
-          platforms: |
-            linux/amd64
-            linux/arm64
-            linux/386
-            linux/arm/v6
-            linux/arm/v7
-            linux/ppc64le
-            linux/s390x
-            linux/riscv64
+          platforms: ${{ matrix.platform }}
+          push: true
 
           build-args: |
             IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
@@ -125,20 +137,18 @@ jobs:
           provenance: ${{ github.event_name != 'pull_request' }}
 
           cache-from: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-${{ matrix.arch }}
 
           cache-to: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary,mode=max
-
-          push: ${{ github.event_name != 'pull_request' }}
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-${{ matrix.arch }},mode=max
 
           tags: |
-            ${{ env.DOCKERHUB_SLUG }}:canary
+            ${{ env.DOCKERHUB_SLUG }}:canary-${{ matrix.arch }}
 
-      - uses: aquasecurity/trivy-action@bfa4b33a029b9aa80ddb784b45574c30e072c59e # master
+      - uses: aquasecurity/trivy-action@bfa4b33a029b9aa80ddb784b45574c30e072c59e
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          image-ref: ${{ env.DOCKERHUB_SLUG }}:canary
+          image-ref: ${{ env.DOCKERHUB_SLUG }}:canary-${{ matrix.arch }}
           exit-code: "1"
           ignore-unfixed: false
           scan-type: image
@@ -146,11 +156,11 @@ jobs:
           severity: "CRITICAL,HIGH"
           format: "table"
 
-      - uses: docker/scout-action@bacf462e8d090c09660de30a6ccc718035f961e3 # v1
+      - uses: docker/scout-action@bacf462e8d090c09660de30a6ccc718035f961e3
         if: ${{ github.event_name != 'pull_request' }}
         with:
           command: cves
-          image: ${{ env.DOCKERHUB_SLUG }}:canary
+          image: ${{ env.DOCKERHUB_SLUG }}:canary-${{ matrix.arch }}
           only-fixed: true
           only-severities: critical,high
           write-comment: true
@@ -161,7 +171,7 @@ jobs:
         run: echo "canary" > variant.txt
 
       - name: Upload variant
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: variant
+          name: unbound-canary
           path: variant.txt
