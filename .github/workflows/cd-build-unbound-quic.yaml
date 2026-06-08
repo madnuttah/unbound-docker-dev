@@ -122,6 +122,13 @@ jobs:
         with:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
+          
+      - name: Normalize platform
+        id: normalize
+        run: |
+          SAFE="${{ matrix.platform }}"
+          SAFE="${SAFE//\//-}"
+          echo "SAFE_PLATFORM=$SAFE" >> "$GITHUB_OUTPUT"
 
       - name: Build and push QUIC image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
@@ -144,10 +151,10 @@ jobs:
             OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
 
           cache-from: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic-${{ matrix.platform }}
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic-${{ steps.normalize.outputs.SAFE_PLATFORM }}
 
           cache-to: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic-${{ matrix.platform }},mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-quic-${{ steps.normalize.outputs.SAFE_PLATFORM }},mode=max
 
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_QUIC_IMAGE_VERSION }}-quic
