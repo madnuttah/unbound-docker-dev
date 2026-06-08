@@ -50,25 +50,11 @@ jobs:
           echo "IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
           echo "UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}"
           echo "OPENSSL_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}"
-          echo "UNBOUND_IMAGE_VERSION=${{ steps.vars.outputs.UNBOUND_IMAGE_VERSION }}"
 
   build:
     needs: buildvars
     runs-on: ubuntu-latest
     
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-          - linux/386
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/ppc64le
-          - linux/s390x
-          - linux/riscv64
-
     permissions:
       contents: read
       packages: write
@@ -97,13 +83,6 @@ jobs:
         with:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
-          
-      - name: Normalize platform
-        id: normalize
-        run: |
-          SAFE="${{ matrix.platform }}"
-          SAFE="${SAFE//\//-}"
-          echo "SAFE_PLATFORM=$SAFE" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
@@ -112,7 +91,15 @@ jobs:
           builder: "${{ steps.buildx.outputs.name }}"
           file: ./unbound/canary.Dockerfile
 
-          platforms: ${{ matrix.platform }}
+          platforms: |
+            linux/amd64
+            linux/arm64
+            linux/386
+            linux/arm/v6
+            linux/arm/v7
+            linux/ppc64le
+            linux/s390x
+            linux/riscv64
 
           build-args: |
             IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
@@ -123,10 +110,10 @@ jobs:
           provenance: ${{ github.event_name != 'pull_request' }}
 
           cache-from: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-${{ steps.normalize.outputs.SAFE_PLATFORM }}
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary
 
           cache-to: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-${{ steps.normalize.outputs.SAFE_PLATFORM }},mode=max
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary,mode=max
 
           push: ${{ github.event_name != 'pull_request' }}
 
@@ -154,3 +141,12 @@ jobs:
           write-comment: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           exit-code: false
+
+      - name: Write variant
+        run: echo "canary" > variant.txt
+
+      - name: Upload variant
+        uses: actions/upload-artifact@v4
+        with:
+          name: variant
+          path: variant.txt

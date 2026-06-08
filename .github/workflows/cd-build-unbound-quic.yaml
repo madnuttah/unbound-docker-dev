@@ -159,3 +159,12 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_QUIC_IMAGE_VERSION }}-quic
             ${{ env.DOCKERHUB_SLUG }}:latest-quic
+            
+      - name: Write variant
+        run: echo "stable-quic" > variant.txt
+
+      - name: Upload variant
+        uses: actions/upload-artifact@v4
+        with:
+          name: variant
+          path: variant.txt

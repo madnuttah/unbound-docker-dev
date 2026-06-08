@@ -80,19 +80,6 @@ jobs:
     if: github.actor == 'renovate[bot]'
     needs: buildvars
     runs-on: ubuntu-latest
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-          - linux/386
-          - linux/arm/v6
-          - linux/arm/v7
-          - linux/ppc64le
-          - linux/s390x
-          - linux/riscv64
 
     permissions:
       contents: read
@@ -123,13 +110,6 @@ jobs:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
           
-      - name: Normalize platform
-        id: normalize
-        run: |
-          SAFE="${{ matrix.platform }}"
-          SAFE="${SAFE//\//-}"
-          echo "SAFE_PLATFORM=$SAFE" >> "$GITHUB_OUTPUT"
-
       - name: Build and push release image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
@@ -137,7 +117,15 @@ jobs:
           builder: "${{ steps.buildx.outputs.name }}"
           file: "unbound/release.Dockerfile"
 
-          platforms: ${{ matrix.platform }}
+        platforms: |
+          linux/amd64
+          linux/arm64
+          linux/386
+          linux/arm/v6
+          linux/arm/v7
+          linux/ppc64le
+          linux/s390x
+          linux/riscv64
 
           push: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
@@ -159,3 +147,12 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_IMAGE_VERSION }}
             ${{ env.DOCKERHUB_SLUG }}:latest
+
+      - name: Write variant
+        run: echo "stable" > variant.txt
+
+      - name: Upload variant
+        uses: actions/upload-artifact@v4
+        with:
+          name: variant
+          path: variant.txt
