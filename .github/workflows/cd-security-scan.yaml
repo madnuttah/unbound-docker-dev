@@ -1,0 +1,58 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # daily at 03:00 CET
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  DOCKERHUB_SLUG: "madnuttah/unbound"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tag:
+          - latest
+          - latest-quic
+          - canary
+          - canary-quic
+
+    steps:
+      - uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
+        with:
+          egress-policy: audit
+
+      - name: Login to DockerHub
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull image
+        run: docker pull "$DOCKERHUB_SLUG:${{ matrix.tag }}"
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: ${{ env.DOCKERHUB_SLUG }}:${{ matrix.tag }}
+          exit-code: "1"
+          ignore-unfixed: false
+          scan-type: image
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+          format: "table"
+
+      - name: Docker Scout CVEs
+        uses: docker/scout-action@cd72f264beff1cd72735de31148b9d3244a0234a
+        with:
+          command: cves
+          image: ${{ env.DOCKERHUB_SLUG }}:${{ matrix.tag }}
+          only-fixed: true
+          only-severities: critical,high
+          write-comment: false
+          exit-code: false

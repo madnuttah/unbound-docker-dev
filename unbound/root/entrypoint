@@ -1,0 +1,39 @@
+#!/bin/sh
+set -euo pipefail
+
+DISABLE_SET_PERMS="${DISABLE_SET_PERMS:-false}"
+UNBOUND_UID="${UNBOUND_UID:-1000}"
+UNBOUND_GID="${UNBOUND_GID:-1000}"
+
+unbound_root="/usr/local/unbound"
+
+if [ "$DISABLE_SET_PERMS" = "true" ]; then
+    command="exec"
+else
+    set_perms=0
+
+    # Check UID
+    current_uid="$(id -u _unbound 2>/dev/null)" || current_uid=""
+    if [ "$current_uid" != "$UNBOUND_UID" ]; then
+        usermod -o -u "$UNBOUND_UID" _unbound 2>/dev/null || true
+        set_perms=1
+    fi
+
+    # Check GID
+    current_gid="$(id -g _unbound 2>/dev/null)" || current_gid=""
+    if [ "$current_gid" != "$UNBOUND_GID" ]; then
+        groupmod -o -g "$UNBOUND_GID" _unbound 2>/dev/null || true
+        set_perms=1
+    fi
+
+    # Apply permissions only if needed
+    if [ "$set_perms" -eq 1 ]; then
+        chown -R "$UNBOUND_UID:$UNBOUND_GID" "$unbound_root" 2>/dev/null || true
+    fi
+
+    command="exec su-exec $UNBOUND_UID:$UNBOUND_GID"
+fi
+
+# Execute Unbound
+# shellcheck disable=SC2086
+$command "$unbound_root/sbin/unbound.sh" "$DISABLE_SET_PERMS"

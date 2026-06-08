@@ -1,0 +1,5 @@
+./unbound/doc
+.dockerignore
+LICENSE
+*.md
+!CHANGELOG.md

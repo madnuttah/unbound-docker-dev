@@ -1,0 +1,152 @@
+name: CD Build Canary Unbound QUIC Docker Image
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "versions/unbound-git-sha.txt"
+
+permissions:
+  actions: read
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  buildvars:
+    runs-on: ubuntu-latest
+    outputs:
+      IMAGE_BUILD_DATE: "${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
+      UNBOUND_VERSION: "${{ steps.vars.outputs.UNBOUND_VERSION }}"
+      OPENSSL_QUIC_BUILDENV_VERSION: "${{ steps.vars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}"
+
+    steps:
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set buildvars
+        id: vars
+        run: |
+          set -euo pipefail
+
+          IMAGE_BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "IMAGE_BUILD_DATE=$IMAGE_BUILD_DATE" >> "$GITHUB_OUTPUT"
+
+          UNBOUND_VERSION="$(
+            curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
+              | awk -F'"' '/^PACKAGE_VERSION=/ { print $2 }'
+          )"
+          echo "UNBOUND_VERSION=$UNBOUND_VERSION" >> "$GITHUB_OUTPUT"
+
+          OPENSSL_BUILDENV_VERSION="$(
+            curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
+              | jq -r '
+                  map(select(.prerelease == false))
+                  | map(select(.name | test("quic")))
+                  | .[0].name
+                '
+          )"
+          echo "OPENSSL_BUILDENV_VERSION=$OPENSSL_BUILDENV_VERSION" >> "$GITHUB_OUTPUT"
+
+
+  build:
+    needs: buildvars
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+          - linux/386
+          - linux/arm/v6
+          - linux/arm/v7
+          - linux/ppc64le
+          - linux/s390x
+          - linux/riscv64
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    env:
+      DOCKERHUB_SLUG: "madnuttah/unbound-dev"
+
+    steps:
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
+
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
+        id: buildx
+
+      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
+        if: github.event_name != 'pull_request'
+        with:
+          username: "${{ secrets.DOCKERHUB_USERNAME }}"
+          password: "${{ secrets.DOCKERHUB_TOKEN }}"
+
+      - name: Build and push
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
+        with:
+          context: .
+          builder: "${{ steps.buildx.outputs.name }}"
+          file: ./unbound/canary_quic.Dockerfile
+
+          platforms: ${{ matrix.platform }}
+
+          build-args: |
+            IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
+            UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
+            OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
+
+          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: ${{ github.event_name != 'pull_request' }}
+
+          cache-from: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-quic-${{ matrix.platform }}
+
+          cache-to: |
+            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-quic-${{ matrix.platform }},mode=max
+
+          push: ${{ github.event_name != 'pull_request' }}
+
+          tags: |
+            ${{ env.DOCKERHUB_SLUG }}:canary-quic
+
+      - uses: aquasecurity/trivy-action@bfa4b33a029b9aa80ddb784b45574c30e072c59e # master
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          image-ref: ${{ env.DOCKERHUB_SLUG }}:canary-quic
+          exit-code: "1"
+          ignore-unfixed: false
+          scan-type: image
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+          format: "table"
+
+      - uses: docker/scout-action@bacf462e8d090c09660de30a6ccc718035f961e3 # v1
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          command: cves
+          image: ${{ env.DOCKERHUB_SLUG }}:canary-quic
+          only-fixed: true
+          only-severities: critical,high
+          write-comment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          exit-code: false
