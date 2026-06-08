@@ -38,27 +38,16 @@ jobs:
           IMAGE_BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           echo "IMAGE_BUILD_DATE=$IMAGE_BUILD_DATE" >> "$GITHUB_OUTPUT"
 
-          UNBOUND_VERSION="$(
-            curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
-              | awk -F'"' '/^PACKAGE_VERSION=/ { print $2 }'
-          )"
-          echo "UNBOUND_VERSION=$UNBOUND_VERSION" >> "$GITHUB_OUTPUT"
-
-          OPENSSL_BUILDENV_VERSION="$(
-            curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
-              | jq -r '
-                  map(select(.prerelease == false))
-                  | map(select(.name | test("quic")))
-                  | .[0].name
-                '
-          )"
-          echo "OPENSSL_BUILDENV_VERSION=$OPENSSL_BUILDENV_VERSION" >> "$GITHUB_OUTPUT"
+          echo "UNBOUND_VERSION=$(curl -s https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
+            | awk -F= '/^version=/ { print $2 }')" >> "$GITHUB_OUTPUT"
+            
+          echo OPENSSL_QUIC_BUILDENV_VERSION="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases \
+            | jq -r '[.[] | select(.prerelease == false)][0].name')-quic" >> "$GITHUB_OUTPUT"
           
       - name: Show build variables
         run: |
           echo "IMAGE_BUILD_DATE=${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
           echo "UNBOUND_VERSION=${{ steps.vars.outputs.UNBOUND_VERSION }}"
-          echo "UNBOUND_SHA256=${{ steps.vars.outputs.UNBOUND_SHA256 }}"
           echo "OPENSSL_BUILDENV_VERSION=${{ steps.vars.outputs.OPENSSL_BUILDENV_VERSION }}"
           echo "UNBOUND_IMAGE_VERSION=${{ steps.vars.outputs.UNBOUND_IMAGE_VERSION }}"
 
