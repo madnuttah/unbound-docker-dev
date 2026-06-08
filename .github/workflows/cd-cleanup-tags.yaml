@@ -1,12 +1,8 @@
 name: CD Cleanup Dockerhub Tags
 
 on:
-  workflow_run:
-    workflows:
-      - "CD Tag And Release"
-    types:
-      - completed
-
+  schedule:
+    - cron: "0 0 * * mon-fri"
   workflow_dispatch:
 
 env:
@@ -18,12 +14,7 @@ permissions:
 
 jobs:
   cleanup-tags:
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success'
-      )
+    if: if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
 
     runs-on: ubuntu-latest
 
