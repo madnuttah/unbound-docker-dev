@@ -28,7 +28,7 @@ jobs:
 
       - name: Download Canary QUIC artifacts
         if: contains(github.event.workflow_run.name, 'Canary Unbound QUIC')
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: variant-canary-quic-*
           merge-multiple: true
@@ -36,7 +36,7 @@ jobs:
 
       - name: Download Canary artifacts
         if: contains(github.event.workflow_run.name, 'Canary Unbound') && !contains(github.event.workflow_run.name, 'QUIC')
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: variant-canary-*
           merge-multiple: true
@@ -44,7 +44,7 @@ jobs:
 
       - name: Download Stable QUIC artifacts
         if: contains(github.event.workflow_run.name, 'Unbound QUIC') && !contains(github.event.workflow_run.name, 'Canary')
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: variant-stable-quic-*
           merge-multiple: true
@@ -52,7 +52,7 @@ jobs:
 
       - name: Download Stable artifacts
         if: contains(github.event.workflow_run.name, 'Unbound Docker Image') && !contains(github.event.workflow_run.name, 'QUIC') && !contains(github.event.workflow_run.name, 'Canary')
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: variant-stable-*
           merge-multiple: true
