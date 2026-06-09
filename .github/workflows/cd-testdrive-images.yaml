@@ -26,20 +26,38 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Download architecture variants
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - name: Download Canary QUIC artifacts
+        if: contains(github.event.workflow_run.name, 'Canary Unbound QUIC')
+        uses: actions/download-artifact@v4
         with:
-          pattern: |
-            ${{ 
-              contains(github.event.workflow_run.name, 'Canary QUIC') && 'variant-canary-quic-*' ||
-              contains(github.event.workflow_run.name, 'Canary') && 'variant-canary-*' ||
-              contains(github.event.workflow_run.name, 'Stable QUIC') && 'variant-stable-quic-*' ||
-              'variant-stable-*'
-            }}          
+          pattern: variant-canary-quic-*
           merge-multiple: true
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          
+
+      - name: Download Canary artifacts
+        if: contains(github.event.workflow_run.name, 'Canary Unbound') && !contains(github.event.workflow_run.name, 'QUIC')
+        uses: actions/download-artifact@v4
+        with:
+          pattern: variant-canary-*
+          merge-multiple: true
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Download Stable QUIC artifacts
+        if: contains(github.event.workflow_run.name, 'Unbound QUIC') && !contains(github.event.workflow_run.name, 'Canary')
+        uses: actions/download-artifact@v4
+        with:
+          pattern: variant-stable-quic-*
+          merge-multiple: true
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Download Stable artifacts
+        if: contains(github.event.workflow_run.name, 'Unbound Docker Image') && !contains(github.event.workflow_run.name, 'QUIC') && !contains(github.event.workflow_run.name, 'Canary')
+        uses: actions/download-artifact@v4
+        with:
+          pattern: variant-stable-*
+          merge-multiple: true
+          run-id: ${{ github.event.workflow_run.id }}
+
       - name: Detect variant
         run: |
           if ls variant-canary-quic-* 2>/dev/null; then
