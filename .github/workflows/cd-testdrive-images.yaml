@@ -26,6 +26,10 @@ jobs:
         with:
           egress-policy: audit
 
+      - name: Debug workflow_run name
+        run: echo "workflow_run.name = '${{ github.event.workflow_run.name }}'"
+
+
       - name: Download Canary QUIC artifacts
         if: contains(github.event.workflow_run.name, 'Canary Unbound QUIC')
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
