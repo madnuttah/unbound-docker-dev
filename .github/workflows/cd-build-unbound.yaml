@@ -22,7 +22,7 @@ permissions:
 jobs:
 
   buildvars:
-    if: success() && (github.actor == 'renovate[bot]' || github.event_name == 'workflow_dispatch')s
+    if: success() && (github.actor == 'renovate[bot]' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     outputs:
       IMAGE_BUILD_DATE: "${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
