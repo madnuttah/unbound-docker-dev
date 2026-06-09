@@ -11,8 +11,8 @@ permissions:
 
 jobs:
   bump-sub:
-    if: github.actor == 'renovate[bot]' && (contains(github.event.pull_request.labels.*.name, 'bump-quic-subversion') || contains(github.event.pull_request.labels.*.name, 'bump-openssl-subversion'))
-
+    if: github.actor == 'renovate[bot]'
+    
     runs-on: ubuntu-latest
 
     steps:
@@ -94,7 +94,12 @@ jobs:
           
           print(f"Changed files: {changed_files}")
           print(f"Unbound version changed: {unbound_changed}")
-          
+
+          if unbound_changed:
+              print("Unbound changed → incrementing subversion")
+              if modify_subversion('versions/unbound.txt', reset=False):
+                  changed = True
+                   
           if 'bump-openssl-subversion' in labels:
               print("Processing label: bump-openssl-subversion")
               if modify_subversion('versions/openssl-buildenv.txt', reset=unbound_changed):

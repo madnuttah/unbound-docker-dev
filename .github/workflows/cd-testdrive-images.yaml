@@ -12,6 +12,7 @@ on:
 
 permissions:
   actions: read
+  checks: write
   contents: read
 
 jobs:
@@ -25,54 +26,34 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Try download stable
-        continue-on-error: true
+      - name: Download architecture variants
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: stable
-          repository: ${{ github.repository }}
+          pattern: |
+            ${{ 
+              contains(github.event.workflow_run.name, 'Canary QUIC') && 'variant-canary-quic-*' ||
+              contains(github.event.workflow_run.name, 'Canary') && 'variant-canary-*' ||
+              contains(github.event.workflow_run.name, 'Stable QUIC') && 'variant-stable-quic-*' ||
+              'variant-stable-*'
+            }}          
+          merge-multiple: true
           run-id: ${{ github.event.workflow_run.id }}
-
-      - name: Try download stable-quic
-        continue-on-error: true
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: stable-quic
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-
-      - name: Try download canary
-        continue-on-error: true
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: canary
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-
-      - name: Try download canary-quic
-        continue-on-error: true
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: canary-quic
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Detect variant
         run: |
-          if [ -f stable/variant.txt ]; then
-            VARIANT=stable
-          elif [ -f stable-quic/variant.txt ]; then
-            VARIANT=stable-quic
-          elif [ -f canary/variant.txt ]; then
-            VARIANT=canary
-          elif [ -f canary-quic/variant.txt ]; then
-            VARIANT=canary-quic
+          if ls variant-canary-quic-* 2>/dev/null; then
+            echo "VARIANT=canary-quic" >> "$GITHUB_ENV"
+          elif ls variant-canary-* 2>/dev/null; then
+            echo "VARIANT=canary" >> "$GITHUB_ENV"
+          elif ls variant-stable-quic-* 2>/dev/null; then
+            echo "VARIANT=stable-quic" >> "$GITHUB_ENV"
+          elif ls variant-stable-* 2>/dev/null; then
+            echo "VARIANT=stable" >> "$GITHUB_ENV"
           else
-            echo "No variant artifact found"
+            echo "No variant artifacts found"
             exit 1
           fi
-
-          echo "VARIANT=$VARIANT" >> "$GITHUB_ENV"
 
       - name: Determine image tag
         run: |

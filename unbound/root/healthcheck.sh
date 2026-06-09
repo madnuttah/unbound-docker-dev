@@ -1,5 +1,6 @@
 #!/bin/sh
-set -euo pipefail
+
+set -eu
 
 ### Environment variables
 
@@ -28,14 +29,15 @@ fi
 
 ### Healthcheck
 
-# Count open TCP/UDP ports
-check_port="$(netstat -ln 2>/dev/null | grep -c ":$HEALTHCHECK_PORT" || echo 0)"
-
-if [ "$check_port" -eq 0 ]; then
-    printf "⚠️ Port %s not open\n" "$HEALTHCHECK_PORT"
-    exit 1
-else
+if grep -q "$(printf ':%04X' "$HEALTHCHECK_PORT")" /proc/net/tcp /proc/net/udp 2>/dev/null; then
     printf "✅ Port %s open\n" "$HEALTHCHECK_PORT"
+else
+    if netstat -ln 2>/dev/null | grep -q ":$HEALTHCHECK_PORT"; then
+        printf "✅ Port %s open\n" "$HEALTHCHECK_PORT"
+    else
+        printf "⚠️ Port %s not open\n" "$HEALTHCHECK_PORT"
+        exit 1
+    fi
 fi
 
 # Exit early if extended check disabled
@@ -45,7 +47,7 @@ fi
 
 ### Extended healthcheck
 
-ip="$(drill -Q -p "$HEALTHCHECK_PORT" "$EXTENDED_HEALTHCHECK_DOMAIN" @127.0.0.1 2>/dev/null)" || ip=""
+ip=$(drill -Q -p "$HEALTHCHECK_PORT" "$EXTENDED_HEALTHCHECK_DOMAIN" @127.0.0.1 2>/dev/null) || ip=""
 
 # Check exit code AND empty output
 if [ -z "$ip" ]; then

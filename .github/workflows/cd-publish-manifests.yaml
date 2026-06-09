@@ -9,9 +9,8 @@ on:
 
 permissions:
   actions: read
+  checks: write
   contents: read
-  packages: write
-  id-token: write
 
 env:
   DOCKERHUB_SLUG: "madnuttah/unbound-docker-dev"
@@ -26,37 +25,35 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Download stable version artifact
+      - name: Download architecture variants
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: unbound-version
-          repository: ${{ github.repository }}
+          pattern: |
+            ${{ 
+              contains(github.event.workflow_run.name, 'Canary QUIC') && 'variant-canary-quic-*' ||
+              contains(github.event.workflow_run.name, 'Canary') && 'variant-canary-*' ||
+              contains(github.event.workflow_run.name, 'Stable QUIC') && 'variant-stable-quic-*' ||
+              'variant-stable-*'
+            }}        
+          merge-multiple: true
           run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Detect variant
+        run: |
+          if ls variant-canary-quic-* 2>/dev/null; then
+            echo "VARIANT=canary-quic" >> "$GITHUB_ENV"
+          elif ls variant-canary-* 2>/dev/null; then
+            echo "VARIANT=canary" >> "$GITHUB_ENV"
+          elif ls variant-stable-quic-* 2>/dev/null; then
+            echo "VARIANT=stable-quic" >> "$GITHUB_ENV"
+          elif ls variant-stable-* 2>/dev/null; then
+            echo "VARIANT=stable" >> "$GITHUB_ENV"
+          else
+            echo "No variant artifacts found"
+            exit 1
+          fi
 
-      - name: Download stable QUIC version artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: unbound-quic-version
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
-
-      - name: Download canary artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: unbound-canary
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
-
-      - name: Download canary QUIC artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: unbound-canary-quic
-          repository: ${{ github.repository }}
-          run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
 
       - name: Read versions
         id: versions
@@ -91,7 +88,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create stable manifest
-        if: ${{ steps.versions.outputs.STABLE_VERSION != '' }}
+        if: ${{ env.VARIANT == 'stable' }}
         run: |
           VERSION="${{ steps.versions.outputs.STABLE_VERSION }}"
           docker buildx imagetools create \
@@ -107,7 +104,7 @@ jobs:
             ${{ env.DOCKERHUB_SLUG }}:${VERSION}-riscv64
 
       - name: Create stable QUIC manifest
-        if: ${{ steps.versions.outputs.STABLE_QUIC_VERSION != '' }}
+        if: ${{ env.VARIANT == 'stable-quic' }}
         run: |
           VERSION="${{ steps.versions.outputs.STABLE_QUIC_VERSION }}"
           docker buildx imagetools create \
@@ -123,7 +120,7 @@ jobs:
             ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-riscv64
 
       - name: Create canary manifest
-        if: ${{ steps.versions.outputs.CANARY != '' }}
+        if: ${{ env.VARIANT == 'canary' }}
         run: |
           docker buildx imagetools create \
             -t ${{ env.DOCKERHUB_SLUG }}:canary \
@@ -135,9 +132,9 @@ jobs:
             ${{ env.DOCKERHUB_SLUG }}:canary-ppc64le \
             ${{ env.DOCKERHUB_SLUG }}:canary-s390x \
             ${{ env.DOCKERHUB_SLUG }}:canary-riscv64
-
+            
       - name: Create canary QUIC manifest
-        if: ${{ steps.versions.outputs.CANARY_QUIC != '' }}
+        if: ${{ env.VARIANT == 'canary-quic' }}
         run: |
           docker buildx imagetools create \
             -t ${{ env.DOCKERHUB_SLUG }}:canary-quic \

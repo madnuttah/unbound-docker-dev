@@ -8,7 +8,9 @@ on:
       - completed
 
 permissions:
-  contents: write
+  actions: read
+  checks: write
+  contents: read
 
 jobs:
   tag_and_release:
@@ -26,25 +28,34 @@ jobs:
         with:
           persist-credentials: false
           
-      - name: Download variant
+      - name: Download architecture variants
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: variant
-          repository: ${{ github.repository }}
+          pattern: |
+            ${{ 
+              contains(github.event.workflow_run.name, 'Canary QUIC') && 'variant-canary-quic-*' ||
+              contains(github.event.workflow_run.name, 'Canary') && 'variant-canary-*' ||
+              contains(github.event.workflow_run.name, 'Stable QUIC') && 'variant-stable-quic-*' ||
+              'variant-stable-*'
+            }}          
+          merge-multiple: true
           run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check variant
+      - name: Detect variant
         run: |
-          VARIANT=$(cat variant/variant.txt)
-          case "$VARIANT" in
-            stable|stable-quic)
-              echo "Proceeding with release for $VARIANT"
-              ;;
-            *)
-              echo "Skipping release for variant: $VARIANT"
-              exit 0
-              ;;
-          esac
+          if ls variant-canary-quic-* 2>/dev/null; then
+            echo "VARIANT=canary-quic" >> "$GITHUB_ENV"
+          elif ls variant-canary-* 2>/dev/null; then
+            echo "VARIANT=canary" >> "$GITHUB_ENV"
+          elif ls variant-stable-quic-* 2>/dev/null; then
+            echo "VARIANT=stable-quic" >> "$GITHUB_ENV"
+          elif ls variant-stable-* 2>/dev/null; then
+            echo "VARIANT=stable" >> "$GITHUB_ENV"
+          else
+            echo "No variant artifacts found"
+            exit 1
+          fi
 
       - name: Import GPG key
         id: IMPORT_GPG
@@ -72,8 +83,25 @@ jobs:
           set -euo pipefail
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
 
-          UNBOUND_VERSION="$(cat versions/unbound.txt)"
-          UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image.txt)"
+          case "$VARIANT" in
+            stable)
+              UNBOUND_VERSION="$(cat versions/unbound.txt)"
+              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image.txt)"
+              ;;
+            stable-quic)
+              UNBOUND_VERSION="$(cat versions/unbound-quic.txt)"
+              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-quic-docker-image.txt)"
+              ;;
+            canary)
+              UNBOUND_VERSION="$(cat versions/unbound.txt)"
+              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image.txt)"
+              ;;
+            canary-quic)
+              UNBOUND_VERSION="$(cat versions/unbound-quic.txt)"
+              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-quic-docker-image.txt)"
+              ;;
+          esac
+
           RELEASE_TAG="v${UNBOUND_DOCKER_VERSION}"
 
           git fetch --all --tags
