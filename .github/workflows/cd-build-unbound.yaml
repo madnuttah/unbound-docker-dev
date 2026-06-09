@@ -79,7 +79,7 @@ jobs:
           echo "UNBOUND_IMAGE_VERSION=${{ steps.vars.outputs.UNBOUND_IMAGE_VERSION }}"
 
   build:
-    if: github.actor == 'renovate[bot]'
+    if: github.actor == 'renovate[bot]' || github.event_name == 'workflow_dispatch'
     needs: buildvars
     runs-on: ubuntu-latest
 
