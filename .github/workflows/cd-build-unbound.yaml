@@ -22,7 +22,7 @@ permissions:
 jobs:
 
   buildvars:
-    if: github.actor == 'renovate[bot]'
+    if: github.actor == 'renovate[bot]' || github.actor == 'madnuttah'
     runs-on: ubuntu-latest
     outputs:
       IMAGE_BUILD_DATE: "${{ steps.vars.outputs.IMAGE_BUILD_DATE }}"
