@@ -26,12 +26,28 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Download metadata artifact
+      - name: Download metadata artifact (non-QUIC)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: unbound-build-metadata
           path: metadata
           run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Download metadata artifact (QUIC)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: unbound-quic-build-metadata
+          path: metadata
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Ensure metadata exists
+        run: |
+          if [ ! -f metadata/variant.txt ]; then
+            echo "No metadata artifact found for this workflow run."
+            exit 1
+          fi
 
       - name: Read variant
         id: variant
