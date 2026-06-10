@@ -26,8 +26,27 @@ jobs:
         with:
           egress-policy: audit
           
+          
+          ####################
+          
       - name: Debug workflow_run id
         run: echo "TESTDRIVE_EXPECTED_RUN_ID=${{ github.event.workflow_run.id }}"
+              
+      - name: List artifacts for this run
+        run: gh run artifacts --run-id ${{ github.event.workflow_run.id }}
+        
+      - name: Debug artifact content
+        run: |
+          gh run download ${{ github.event.workflow_run.id }} -n unbound-build-metadata -D debug-artifact
+          ls -R debug-artifact
+          
+      - name: Debug artifact API
+        run: |
+          gh api "/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts" \
+            --jq '.artifacts[] | {id, name, size_in_bytes}'
+
+          
+    #################
 
       - name: Download metadata artifact (non-QUIC)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
