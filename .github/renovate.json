@@ -28,7 +28,7 @@
         "/(^|/)versions/unbound\\.txt$/"
       ],
       "matchStrings": [
-        "(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)"
+        "^unbound=(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+)$"
       ],
       "datasourceTemplate": "github-releases",
       "packageNameTemplate": "NLnetLabs/unbound",
@@ -46,7 +46,7 @@
       ],
       "datasourceTemplate": "github-releases",
       "packageNameTemplate": "madnuttah/openssl-buildenv",
-      "extractVersionTemplate": "^v(?<version>.*)$",
+      "extractVersionTemplate": "^(?<version>.*)$",
       "versioningTemplate": "loose"
     },
 
@@ -60,7 +60,7 @@
       ],
       "datasourceTemplate": "github-releases",
       "packageNameTemplate": "madnuttah/openssl-buildenv",
-      "extractVersionTemplate": "^v(?<version>.*)$",
+      "extractVersionTemplate": "^(?<version>.*)$",
       "versioningTemplate": "loose"
     }
   ],

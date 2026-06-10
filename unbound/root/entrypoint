@@ -32,5 +32,4 @@ else
     command="exec su-exec $UNBOUND_UID:$UNBOUND_GID"
 fi
 
-# shellcheck disable=SC2086
 $command "$unbound_root/sbin/unbound.sh" "$DISABLE_SET_PERMS"

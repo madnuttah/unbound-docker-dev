@@ -49,29 +49,36 @@ jobs:
           labels = "${{ join(github.event.pull_request.labels.*.name, ',') }}".split(',')
           
           def modify_subversion(filepath, reset=False):
-              """Modify subversion in version file."""
+              """Modify subversion inside 'unbound=X.Y.Z-N[-quic]'."""
               if not os.path.exists(filepath):
                   print(f"File not found: {filepath}")
                   return False
-              
+
               with open(filepath, 'r') as f:
-                  content = f.read()
-              
-              match = re.search(r'sub=(\d+)', content)
-              if match:
-                  old_sub = int(match.group(1))
-                  new_sub = 0 if reset else old_sub + 1
-                  
-                  if old_sub == new_sub:
-                      print(f"{filepath} already at sub={new_sub}. No change.")
-                      return False
-                      
-                  new_content = content.replace(f"sub={old_sub}", f"sub={new_sub}")
-                  with open(filepath, 'w') as f:
-                      f.write(new_content)
-                  print(f"Updated {filepath}: sub={old_sub} → sub={new_sub}")
-                  return True
-              return False
+                  content = f.read().strip()
+
+              match = re.search(r'unbound=(\d+\.\d+\.\d+)-(\d+)(-quic)?', content)
+              if not match:
+                  print(f"No version pattern found in {filepath}")
+                  return False
+
+              base = match.group(1)
+              old_sub = int(match.group(2))
+              suffix = match.group(3) or ""
+
+              new_sub = 0 if reset else old_sub + 1
+
+              if new_sub == old_sub:
+                  print(f"{filepath} already at sub={new_sub}. No change.")
+                  return False
+
+              new_version = f"unbound={base}-{new_sub}{suffix}"
+
+              with open(filepath, 'w') as f:
+                  f.write(new_version + "\n")
+
+              print(f"Updated {filepath}: {base}-{old_sub}{suffix} → {base}-{new_sub}{suffix}")
+              return True
 
           def get_changed_files():
               """Get files changed compared to main branch."""
@@ -96,10 +103,12 @@ jobs:
           print(f"Unbound version changed: {unbound_changed}")
 
           if unbound_changed:
-              print("Unbound changed → incrementing subversion")
-              if modify_subversion('versions/unbound.txt', reset=False):
+              print("Unbound changed -> resetting subversion to 0")
+              if modify_subversion('versions/unbound-docker-image.txt', reset=True):
                   changed = True
-                   
+              if modify_subversion('versions/unbound-quic-docker-image.txt', reset=True):
+                  changed = True
+     
           if 'bump-openssl-subversion' in labels:
               print("Processing label: bump-openssl-subversion")
               if modify_subversion('versions/openssl-buildenv.txt', reset=unbound_changed):
@@ -124,3 +133,9 @@ jobs:
           git add versions/*.txt
           git commit -m "fix: auto-manage unbound subversion"
           git push
+
+      - name: Fail if no changes were made
+        if: env.HAS_CHANGES == 'false'
+        run: |
+          echo "Expected to bump subversion but no changes were made."
+          exit 1

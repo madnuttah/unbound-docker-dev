@@ -18,131 +18,106 @@ env:
 jobs:
   publish-manifests:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
         with:
           egress-policy: audit
 
-      - name: Download architecture variants
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - name: Download metadata artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          pattern: |
-            ${{ 
-              contains(github.event.workflow_run.name, 'Canary QUIC') && 'variant-canary-quic-*' ||
-              contains(github.event.workflow_run.name, 'Canary') && 'variant-canary-*' ||
-              contains(github.event.workflow_run.name, 'Stable QUIC') && 'variant-stable-quic-*' ||
-              'variant-stable-*'
-            }}        
-          merge-multiple: true
+          name: unbound-build-metadata
+          path: metadata
           run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Detect variant
-        run: |
-          if ls variant-canary-quic-* 2>/dev/null; then
-            echo "VARIANT=canary-quic" >> "$GITHUB_ENV"
-          elif ls variant-canary-* 2>/dev/null; then
-            echo "VARIANT=canary" >> "$GITHUB_ENV"
-          elif ls variant-stable-quic-* 2>/dev/null; then
-            echo "VARIANT=stable-quic" >> "$GITHUB_ENV"
-          elif ls variant-stable-* 2>/dev/null; then
-            echo "VARIANT=stable" >> "$GITHUB_ENV"
-          else
-            echo "No variant artifacts found"
-            exit 1
-          fi
 
-
-      - name: Read versions
-        id: versions
+      - name: Read variant
+        id: variant
+        shell: bash
         run: |
           set -euo pipefail
+          VARIANT="$(cat metadata/variant.txt)"
+          printf "VARIANT=%s\n" "$VARIANT" >> "$GITHUB_ENV"
 
-          STABLE_VERSION=""
-          STABLE_QUIC_VERSION=""
-          CANARY="canary"
-          CANARY_QUIC="canary-quic"
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(cat metadata/version.txt)"
+          printf "VERSION=%s\n" "$VERSION" >> "$GITHUB_ENV"
 
-          if [ -f unbound-version/version.txt ]; then
-            STABLE_VERSION=$(cat unbound-version/version.txt)
-          fi
-
-          if [ -f unbound-quic-version/version.txt ]; then
-            STABLE_QUIC_VERSION=$(cat unbound-quic-version/version.txt)
-          fi
-
-          {
-            echo "STABLE_VERSION=${STABLE_VERSION}"
-            echo "STABLE_QUIC_VERSION=${STABLE_QUIC_VERSION}"
-            echo "CANARY=${CANARY}"
-            echo "CANARY_QUIC=${CANARY_QUIC}"
-          } >> "$GITHUB_OUTPUT"
-
-      - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
-      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
-      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
+      - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5
+      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Create stable manifest
-        if: ${{ env.VARIANT == 'stable' }}
+      - name: Create manifest
+        shell: bash
         run: |
-          VERSION="${{ steps.versions.outputs.STABLE_VERSION }}"
-          docker buildx imagetools create \
-            -t ${{ env.DOCKERHUB_SLUG }}:${VERSION} \
-            -t ${{ env.DOCKERHUB_SLUG }}:latest \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-amd64 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-arm64 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-386 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-armv6 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-armv7 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-ppc64le \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-s390x \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-riscv64
+          set -euo pipefail
 
-      - name: Create stable QUIC manifest
-        if: ${{ env.VARIANT == 'stable-quic' }}
-        run: |
-          VERSION="${{ steps.versions.outputs.STABLE_QUIC_VERSION }}"
-          docker buildx imagetools create \
-            -t ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic \
-            -t ${{ env.DOCKERHUB_SLUG }}:latest-quic \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-amd64 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-arm64 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-386 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-armv6 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-armv7 \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-ppc64le \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-s390x \
-            ${{ env.DOCKERHUB_SLUG }}:${VERSION}-quic-riscv64
+          case "$VARIANT" in
+            stable)
+              docker buildx imagetools create \
+                -t "${DOCKERHUB_SLUG}:${VERSION}" \
+                -t "${DOCKERHUB_SLUG}:latest" \
+                "${DOCKERHUB_SLUG}:${VERSION}-amd64" \
+                "${DOCKERHUB_SLUG}:${VERSION}-arm64" \
+                "${DOCKERHUB_SLUG}:${VERSION}-386" \
+                "${DOCKERHUB_SLUG}:${VERSION}-armv6" \
+                "${DOCKERHUB_SLUG}:${VERSION}-armv7" \
+                "${DOCKERHUB_SLUG}:${VERSION}-ppc64le" \
+                "${DOCKERHUB_SLUG}:${VERSION}-s390x" \
+                "${DOCKERHUB_SLUG}:${VERSION}-riscv64"
+              ;;
 
-      - name: Create canary manifest
-        if: ${{ env.VARIANT == 'canary' }}
-        run: |
-          docker buildx imagetools create \
-            -t ${{ env.DOCKERHUB_SLUG }}:canary \
-            ${{ env.DOCKERHUB_SLUG }}:canary-amd64 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-arm64 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-386 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-armv6 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-armv7 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-ppc64le \
-            ${{ env.DOCKERHUB_SLUG }}:canary-s390x \
-            ${{ env.DOCKERHUB_SLUG }}:canary-riscv64
-            
-      - name: Create canary QUIC manifest
-        if: ${{ env.VARIANT == 'canary-quic' }}
-        run: |
-          docker buildx imagetools create \
-            -t ${{ env.DOCKERHUB_SLUG }}:canary-quic \
-            ${{ env.DOCKERHUB_SLUG }}:canary-quic-amd64 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-quic-arm64 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-quic-386 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-quic-armv6 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-quic-armv7 \
-            ${{ env.DOCKERHUB_SLUG }}:canary-quic-ppc64le \
-            ${{ env.DOCKERHUB_SLUG }}:canary-quic-s390x \
-            ${{ env.DOCKERHUB_SLUG }}:canary-quic-riscv64
+            stable-quic)
+              docker buildx imagetools create \
+                -t "${DOCKERHUB_SLUG}:${VERSION}-quic" \
+                -t "${DOCKERHUB_SLUG}:latest-quic" \
+                "${DOCKERHUB_SLUG}:${VERSION}-quic-amd64" \
+                "${DOCKERHUB_SLUG}:${VERSION}-quic-arm64" \
+                "${DOCKERHUB_SLUG}:${VERSION}-quic-386" \
+                "${DOCKERHUB_SLUG}:${VERSION}-quic-armv6" \
+                "${DOCKERHUB_SLUG}:${VERSION}-quic-armv7" \
+                "${DOCKERHUB_SLUG}:${VERSION}-quic-ppc64le" \
+                "${DOCKERHUB_SLUG}:${VERSION}-quic-s390x" \
+                "${DOCKERHUB_SLUG}:${VERSION}-quic-riscv64"
+              ;;
+
+            canary)
+              docker buildx imagetools create \
+                -t "${DOCKERHUB_SLUG}:canary" \
+                "${DOCKERHUB_SLUG}:canary-amd64" \
+                "${DOCKERHUB_SLUG}:canary-arm64" \
+                "${DOCKERHUB_SLUG}:canary-386" \
+                "${DOCKERHUB_SLUG}:canary-armv6" \
+                "${DOCKERHUB_SLUG}:canary-armv7" \
+                "${DOCKERHUB_SLUG}:canary-ppc64le" \
+                "${DOCKERHUB_SLUG}:canary-s390x" \
+                "${DOCKERHUB_SLUG}:canary-riscv64"
+              ;;
+
+            canary-quic)
+              docker buildx imagetools create \
+                -t "${DOCKERHUB_SLUG}:canary-quic" \
+                "${DOCKERHUB_SLUG}:canary-quic-amd64" \
+                "${DOCKERHUB_SLUG}:canary-quic-arm64" \
+                "${DOCKERHUB_SLUG}:canary-quic-386" \
+                "${DOCKERHUB_SLUG}:canary-quic-armv6" \
+                "${DOCKERHUB_SLUG}:canary-quic-armv7" \
+                "${DOCKERHUB_SLUG}:canary-quic-ppc64le" \
+                "${DOCKERHUB_SLUG}:canary-quic-s390x" \
+                "${DOCKERHUB_SLUG}:canary-quic-riscv64"
+              ;;
+
+            *)
+              echo "Unknown variant: $VARIANT" >&2
+              exit 1
+              ;;
+          esac

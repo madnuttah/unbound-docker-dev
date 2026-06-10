@@ -1,2 +1,1 @@
-unbound=1.25.1
-sub=5
+unbound=1.25.1-5-quic

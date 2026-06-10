@@ -46,20 +46,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          UNBOUND_VERSION=$(cat versions/unbound.txt)
+          UNBOUND_VERSION="$(cat versions/unbound.txt)"
 
           SHA_URL="https://nlnetlabs.nl/downloads/unbound/unbound-${UNBOUND_VERSION}.tar.gz.sha256"
 
           if ! curl --fail -sL "$SHA_URL" >/dev/null; then
-            printf "ERROR: SHA256 file not found for %s\n" "${UNBOUND_VERSION}" >&2
+            printf "ERROR: SHA256 file not found for %s\n" "$UNBOUND_VERSION" >&2
             exit 1
           fi
 
-          UNBOUND_SHA256=$(curl -sL "$SHA_URL" | awk '{print $1}')
+          UNBOUND_SHA256="$(curl -sL "$SHA_URL" | awk '{print $1}')"
 
-          OPENSSL_QUIC_BUILDENV_VERSION=$(grep '^OPENSSL_QUIC_BUILDENV_VERSION=' versions/openssl-quic-buildenv.txt | cut -d= -f2)
+          OPENSSL_QUIC_BUILDENV_VERSION="$(grep '^OPENSSL_QUIC_BUILDENV_VERSION=' versions/openssl-quic-buildenv.txt | cut -d= -f2)"
 
-          UNBOUND_SUB=$(grep '^sub=' versions/unbound-quic-docker-image.txt | cut -d= -f2)
+          UNBOUND_SUB="$(grep -oP '(?<=unbound=\d+\.\d+\.\d+-)\d+' versions/unbound-quic-docker-image.txt)"
           UNBOUND_QUIC_IMAGE_VERSION="${UNBOUND_VERSION}-${UNBOUND_SUB}"
 
           {
@@ -82,6 +82,7 @@ jobs:
     if: github.actor == 'renovate[bot]' || github.event_name == 'workflow_dispatch'
     needs: buildvars
     runs-on: ubuntu-latest
+    timeout-minutes: 180
 
     strategy:
       fail-fast: false
@@ -157,11 +158,20 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_QUIC_IMAGE_VERSION }}-quic-${{ matrix.arch }}
 
-      - name: Write variant
-        run: echo "stable-quic" > variant.txt
+  upload-pipeline-metadata:
+    needs: [buildvars, build]
+    runs-on: ubuntu-latest
 
-      - name: Upload variant
+    steps:
+      - name: Create Isolated Metadata
+        run: |
+          mkdir -p metadata-payload
+          printf "%s" "${{ needs.buildvars.outputs.UNBOUND_QUIC_IMAGE_VERSION }}" > metadata-payload/version.txt
+          printf "stable-quic" > metadata-payload/variant.txt
+
+      - name: Upload Metadata Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: variant-stable-quic-${{ matrix.arch }}
-          path: variant.txt
+          name: unbound-build-metadata
+          path: metadata-payload/
+          retention-days: 1

@@ -13,6 +13,7 @@ permissions:
   id-token: write
 
 jobs:
+
   buildvars:
     runs-on: ubuntu-latest
     outputs:
@@ -38,23 +39,23 @@ jobs:
           IMAGE_BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           echo "IMAGE_BUILD_DATE=$IMAGE_BUILD_DATE" >> "$GITHUB_OUTPUT"
 
-          UNBOUND_VERSION=$(
+          UNBOUND_VERSION="$(
             curl -fsSL https://raw.githubusercontent.com/NLnetLabs/unbound/master/configure \
             | awk -F= '/^version=/ { print $2 }'
-          )
+          )"
           echo "UNBOUND_VERSION=$UNBOUND_VERSION" >> "$GITHUB_OUTPUT"
 
-          RESP=$(curl -fsSL https://api.github.com/repos/madnuttah/openssl-buildenv/releases)
+          RESP="$(curl -fsSL https://api.github.com/repos/madnuttah/openssl-buildenv/releases)"
           echo "$RESP" | jq empty
 
-          OPENSSL_QUIC_BUILDENV_VERSION=$(
+          OPENSSL_QUIC_BUILDENV_VERSION="$(
             echo "$RESP" |
             jq -r '
               map(select(.prerelease == false and (.name | endswith("-quic"))))
               | first
               | .name
             '
-          )
+          )"
 
           echo "OPENSSL_QUIC_BUILDENV_VERSION=$OPENSSL_QUIC_BUILDENV_VERSION" >> "$GITHUB_OUTPUT"
 
@@ -67,6 +68,7 @@ jobs:
   build:
     needs: buildvars
     runs-on: ubuntu-latest
+    timeout-minutes: 180
 
     strategy:
       fail-fast: false
@@ -118,7 +120,7 @@ jobs:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
 
-      - name: Build and push arch image
+      - name: Build and push QUIC Canary arch image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf
         with:
           context: .
@@ -145,11 +147,20 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:canary-quic-${{ matrix.arch }}
 
-      - name: Write variant
-        run: echo "canary-quic" > variant.txt
+  upload-pipeline-metadata:
+    needs: [buildvars, build]
+    runs-on: ubuntu-latest
 
-      - name: Upload variant
+    steps:
+      - name: Create Isolated Metadata
+        run: |
+          mkdir -p metadata-payload
+          printf "%s" "${{ needs.buildvars.outputs.UNBOUND_VERSION }}" > metadata-payload/version.txt
+          printf "canary-quic" > metadata-payload/variant.txt
+
+      - name: Upload Metadata Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: variant-canary-quic-${{ matrix.arch }}
-          path: variant.txt
+          name: unbound-build-metadata
+          path: metadata-payload/
+          retention-days: 1
