@@ -26,27 +26,24 @@ jobs:
         with:
           egress-policy: audit
           
+####################
           
-          ####################
-          
-      - name: Debug workflow_run id
-        run: echo "TESTDRIVE_EXPECTED_RUN_ID=${{ github.event.workflow_run.id }}"
-              
-      - name: List artifacts for this run
-        run: gh run artifacts --run-id ${{ github.event.workflow_run.id }}
-        
-      - name: Debug artifact content
+      - name: Debug: List artifacts in this run
         run: |
-          gh run download ${{ github.event.workflow_run.id }} -n unbound-build-metadata -D debug-artifact
-          ls -R debug-artifact
-          
-      - name: Debug artifact API
-        run: |
+          echo "Listing artifacts via API:"
           gh api "/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts" \
-            --jq '.artifacts[] | {id, name, size_in_bytes}'
+            --jq '.artifacts[] | {name, id, size_in_bytes}'
 
-          
-    #################
+      - name: Debug: Try manual artifact download
+        run: |
+          echo "Attempting manual download..."
+          gh run download ${{ github.event.workflow_run.id }} \
+            -n unbound-build-metadata \
+            -D debug-artifact || echo "Manual download failed"
+          echo "Listing downloaded files:"
+          ls -R debug-artifact || echo "No files downloaded"
+
+#################
 
       - name: Download metadata artifact (non-QUIC)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
