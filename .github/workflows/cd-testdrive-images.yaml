@@ -39,11 +39,14 @@ jobs:
       - name: Debug: Try manual artifact download
         run: |
           echo "Attempting manual download..."
-          gh run download ${{ github.event.workflow_run.id }} \
+          gh run download \
+            ${{ github.event.workflow_run.id }} \
             -n unbound-build-metadata \
             -D debug-artifact || echo "Manual download failed"
+
           echo "Listing downloaded files:"
           ls -R debug-artifact || echo "No files downloaded"
+
 
       ####################
       # DEBUGGING END
