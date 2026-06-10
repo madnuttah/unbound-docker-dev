@@ -26,7 +26,10 @@ jobs:
         with:
           egress-policy: audit
 
-          
+      ####################
+      # DEBUGGING START
+      ####################
+
       - name: Debug: List artifacts in this run
         run: |
           echo "Listing artifacts via API:"
@@ -41,6 +44,19 @@ jobs:
             -D debug-artifact || echo "Manual download failed"
           echo "Listing downloaded files:"
           ls -R debug-artifact || echo "No files downloaded"
+
+      ####################
+      # DEBUGGING END
+      ####################
+
+      - name: Download metadata artifact (non-QUIC)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: unbound-build-metadata
+          path: metadata
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
 
 
       - name: Download metadata artifact (non-QUIC)
