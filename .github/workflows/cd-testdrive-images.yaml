@@ -29,6 +29,8 @@ jobs:
       - name: Fetch metadata artifact ID
         id: fetch
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -69,6 +71,9 @@ jobs:
 
       - name: Download metadata artifact via API
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+
         run: |
           set -euo pipefail
 
