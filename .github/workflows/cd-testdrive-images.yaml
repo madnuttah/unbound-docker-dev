@@ -73,7 +73,6 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-
         run: |
           set -euo pipefail
 
@@ -83,11 +82,11 @@ jobs:
           echo "Downloading artifact $ARTIFACT_NAME (ID=$ARTIFACT_ID)"
 
           gh api "/repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip" \
-            --output artifact.zip
+            -o artifact.zip
 
           mkdir metadata
           unzip artifact.zip -d metadata
-
+          
           echo "Downloaded metadata content:"
           ls -R metadata
 
