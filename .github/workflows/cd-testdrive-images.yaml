@@ -26,57 +26,65 @@ jobs:
         with:
           egress-policy: audit
 
-      ####################
-      # DEBUGGING START
-      ####################
-
-      - name: Debug: List artifacts in this run
+      - name: Fetch metadata artifact ID
+        id: fetch
+        shell: bash
         run: |
-          echo "Listing artifacts via API:"
-          gh api "/repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/artifacts" \
-            --jq '.artifacts[] | {name, id, size_in_bytes}'
+          set -euo pipefail
 
-      - name: Debug: Try manual artifact download
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          echo "Polling GitHub API for metadata artifacts in run $RUN_ID"
+
+          NAMES=("unbound-build-metadata" "unbound-quic-build-metadata")
+
+          ARTIFACT_ID=""
+          ARTIFACT_NAME=""
+
+          for name in "${NAMES[@]}"; do
+            echo "Checking for artifact: $name"
+
+            for i in {1..10}; do
+              ID=$(gh api "/repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts" \
+                --jq ".artifacts[] | select(.name==\"$name\") | .id" || true)
+
+              if [[ -n "$ID" ]]; then
+                ARTIFACT_ID="$ID"
+                ARTIFACT_NAME="$name"
+                echo "Found artifact: $name (ID=$ID)"
+                break 2
+              fi
+
+              echo "Not found yet, retry $i/10..."
+              sleep 3
+            done
+          done
+
+          if [[ -z "$ARTIFACT_ID" ]]; then
+            echo "ERROR: No metadata artifact found in run $RUN_ID"
+            exit 1
+          fi
+
+          echo "artifact_id=$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Download metadata artifact via API
+        shell: bash
         run: |
-          echo "Attempting manual download..."
-          gh run download \
-            ${{ github.event.workflow_run.id }} \
-            -n unbound-build-metadata \
-            -D debug-artifact || echo "Manual download failed"
+          set -euo pipefail
 
-          echo "Listing downloaded files:"
-          ls -R debug-artifact || echo "No files downloaded"
+          ARTIFACT_ID="${{ steps.fetch.outputs.artifact_id }}"
+          ARTIFACT_NAME="${{ steps.fetch.outputs.artifact_name }}"
 
+          echo "Downloading artifact $ARTIFACT_NAME (ID=$ARTIFACT_ID)"
 
-      ####################
-      # DEBUGGING END
-      ####################
+          gh api "/repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip" \
+            --output artifact.zip
 
-      - name: Download metadata artifact (non-QUIC)
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: unbound-build-metadata
-          path: metadata
-          run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
+          mkdir metadata
+          unzip artifact.zip -d metadata
 
-
-
-      - name: Download metadata artifact (non-QUIC)
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: unbound-build-metadata
-          path: metadata
-          run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
-
-      - name: Download metadata artifact (QUIC)
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: unbound-quic-build-metadata
-          path: metadata
-          run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
+          echo "Downloaded metadata content:"
+          ls -R metadata
 
       - name: Ensure metadata exists
         run: |
