@@ -25,8 +25,7 @@ jobs:
         uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
         with:
           egress-policy: audit
-          
-####################
+
           
       - name: Debug: List artifacts in this run
         run: |
@@ -43,7 +42,6 @@ jobs:
           echo "Listing downloaded files:"
           ls -R debug-artifact || echo "No files downloaded"
 
-#################
 
       - name: Download metadata artifact (non-QUIC)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
