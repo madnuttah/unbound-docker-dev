@@ -150,8 +150,12 @@ jobs:
   upload-pipeline-metadata:
     needs: [buildvars, build]
     runs-on: ubuntu-latest
-
+    
     steps:
+    
+      - name: Debug run id
+        run: echo "BUILD_RUN_ID=$GITHUB_RUN_ID"
+      
       - name: Create Isolated Metadata
         run: |
           mkdir -p metadata-payload

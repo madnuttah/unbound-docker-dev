@@ -25,6 +25,9 @@ jobs:
         uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
         with:
           egress-policy: audit
+          
+      - name: Debug workflow_run id
+        run: echo "TESTDRIVE_EXPECTED_RUN_ID=${{ github.event.workflow_run.id }}"
 
       - name: Download metadata artifact (non-QUIC)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
