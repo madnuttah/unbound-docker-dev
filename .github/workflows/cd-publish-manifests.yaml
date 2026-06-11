@@ -129,7 +129,7 @@ jobs:
           echo "DIGEST=$MANIFEST_DIGEST" >> "$GITHUB_OUTPUT"
 
       - name: Generate SLSA Build Provenance
-        uses: actions/attest@v4
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
         continue-on-error: true
         with:
           subject-name: index.docker.io/${{ env.DOCKERHUB_SLUG }}
