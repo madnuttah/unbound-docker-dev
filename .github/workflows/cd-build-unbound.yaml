@@ -139,8 +139,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
 
-          sbom: ${{ github.event_name != 'pull_request' }}
-          provenance: ${{ github.event_name != 'pull_request' }}
+          sbom: false
+          provenance: false
 
           build-args: |
             IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
@@ -175,4 +175,3 @@ jobs:
           name: unbound-build-metadata
           path: metadata-payload/
           retention-days: 1
-

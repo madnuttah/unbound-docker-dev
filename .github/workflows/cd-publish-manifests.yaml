@@ -11,6 +11,9 @@ permissions:
   actions: read
   checks: write
   contents: read
+  id-token: write
+  attestations: write
+  packages: write
 
 env:
   DOCKERHUB_SLUG: "madnuttah/unbound-docker-dev"
@@ -26,21 +29,12 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Download metadata artifact (non-QUIC)
+      - name: Download metadata artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: unbound-build-metadata
           path: metadata
           run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
-
-      - name: Download metadata artifact (QUIC)
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: unbound-quic-build-metadata
-          path: metadata
-          run-id: ${{ github.event.workflow_run.id }}
-        continue-on-error: true
 
       - name: Ensure metadata exists
         run: |
@@ -49,21 +43,11 @@ jobs:
             exit 1
           fi
 
-      - name: Read variant
-        id: variant
-        shell: bash
+      - name: Read variant and version
         run: |
           set -euo pipefail
-          VARIANT="$(cat metadata/variant.txt)"
-          printf "VARIANT=%s\n" "$VARIANT" >> "$GITHUB_ENV"
-
-      - name: Read version
-        id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(cat metadata/version.txt)"
-          printf "VERSION=%s\n" "$VERSION" >> "$GITHUB_ENV"
+          echo "VARIANT=$(cat metadata/variant.txt)" >> "$GITHUB_ENV"
+          echo "VERSION=$(cat metadata/version.txt)" >> "$GITHUB_ENV"
 
       - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3
       - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5
@@ -73,13 +57,17 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create manifest
+        id: manifest
         shell: bash
         run: |
           set -euo pipefail
+          
+          # Wir nutzen --metadata-file, um den exakten Digest des erzeugten Manifest-Index abzufangen
+          METADATA_FILE="manifest-metadata.json"
 
           case "$VARIANT" in
             stable)
-              docker buildx imagetools create \
+              docker buildx imagetools create --metadata-file "$METADATA_FILE" \
                 -t "${DOCKERHUB_SLUG}:${VERSION}" \
                 -t "${DOCKERHUB_SLUG}:latest" \
                 "${DOCKERHUB_SLUG}:${VERSION}-amd64" \
@@ -93,7 +81,7 @@ jobs:
               ;;
 
             stable-quic)
-              docker buildx imagetools create \
+              docker buildx imagetools create --metadata-file "$METADATA_FILE" \
                 -t "${DOCKERHUB_SLUG}:${VERSION}-quic" \
                 -t "${DOCKERHUB_SLUG}:latest-quic" \
                 "${DOCKERHUB_SLUG}:${VERSION}-quic-amd64" \
@@ -107,7 +95,7 @@ jobs:
               ;;
 
             canary)
-              docker buildx imagetools create \
+              docker buildx imagetools create --metadata-file "$METADATA_FILE" \
                 -t "${DOCKERHUB_SLUG}:canary" \
                 "${DOCKERHUB_SLUG}:canary-amd64" \
                 "${DOCKERHUB_SLUG}:canary-arm64" \
@@ -120,7 +108,7 @@ jobs:
               ;;
 
             canary-quic)
-              docker buildx imagetools create \
+              docker buildx imagetools create --metadata-file "$METADATA_FILE" \
                 -t "${DOCKERHUB_SLUG}:canary-quic" \
                 "${DOCKERHUB_SLUG}:canary-quic-amd64" \
                 "${DOCKERHUB_SLUG}:canary-quic-arm64" \
@@ -131,9 +119,19 @@ jobs:
                 "${DOCKERHUB_SLUG}:canary-quic-s390x" \
                 "${DOCKERHUB_SLUG}:canary-quic-riscv64"
               ;;
-
             *)
               echo "Unknown variant: $VARIANT" >&2
               exit 1
               ;;
           esac
+
+          MANIFEST_DIGEST=$(jq -r '.["containerimage.descriptor"].digest' "$METADATA_FILE")
+          echo "DIGEST=$MANIFEST_DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: Generate SLSA Build Provenance
+        uses: actions/attest@v4
+        continue-on-error: true
+        with:
+          subject-name: index.docker.io/${{ env.DOCKERHUB_SLUG }}
+          subject-digest: ${{ steps.manifest.outputs.DIGEST }}
+          push-to-registry: true

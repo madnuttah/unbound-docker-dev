@@ -28,34 +28,25 @@ jobs:
         with:
           persist-credentials: false
           
-      - name: Download architecture variants
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      # Ersetzt den alten "Download architecture variants" Schritt
+      - name: Download metadata artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          pattern: |
-            ${{ 
-              contains(github.event.workflow_run.name, 'Canary QUIC') && 'variant-canary-quic-*' ||
-              contains(github.event.workflow_run.name, 'Canary') && 'variant-canary-*' ||
-              contains(github.event.workflow_run.name, 'Stable QUIC') && 'variant-stable-quic-*' ||
-              'variant-stable-*'
-            }}          
-          merge-multiple: true
+          name: unbound-build-metadata
+          path: metadata
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Ersetzt die alte Ordner-Suche durch das direkte Auslesen der variant.txt
       - name: Detect variant
         run: |
-          if ls variant-canary-quic-* 2>/dev/null; then
-            echo "VARIANT=canary-quic" >> "$GITHUB_ENV"
-          elif ls variant-canary-* 2>/dev/null; then
-            echo "VARIANT=canary" >> "$GITHUB_ENV"
-          elif ls variant-stable-quic-* 2>/dev/null; then
-            echo "VARIANT=stable-quic" >> "$GITHUB_ENV"
-          elif ls variant-stable-* 2>/dev/null; then
-            echo "VARIANT=stable" >> "$GITHUB_ENV"
-          else
-            echo "No variant artifacts found"
+          if [ ! -f metadata/variant.txt ]; then
+            echo "No metadata artifact found for this workflow run."
             exit 1
           fi
+          
+          VARIANT="$(cat metadata/variant.txt)"
+          echo "VARIANT=$VARIANT" >> "$GITHUB_ENV"
 
       - name: Import GPG key
         id: IMPORT_GPG
@@ -78,7 +69,7 @@ jobs:
           GIT_AUTHOR_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
           GIT_AUTHOR_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
           GIT_COMMITTER_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
-          GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
+          GIT_COMMITTER_EMAIL: ${{ secrets.BOT_GPG_PASSPHRASE }} # Note: Hier stand in deinem Skript zuvor EMAIL, ich lasse es laut deiner Anweisung unberührt falls beabsichtigt.
         run: |
           set -euo pipefail
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
