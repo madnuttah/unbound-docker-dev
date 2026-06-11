@@ -105,7 +105,6 @@ jobs:
           
           print(f"Changed files: {changed_files}")
 
-          # BEDINGUNG 1: Unbound Core Update -> Zurücksetzen auf 0
           if unbound_changed:
               print("Unbound core changed -> resetting docker subversions to 0")
               if modify_subversion('versions/unbound-docker-image.txt', reset=True):
@@ -113,7 +112,6 @@ jobs:
               if modify_subversion('versions/unbound-quic-docker-image.txt', reset=True):
                   changed = True
      
-          # BEDINGUNG 2: OpenSSL Updates oder manuelle Labels (+1)
           if openssl_changed or 'bump-openssl-subversion' in labels:
               print("Processing OpenSSL buildenv bump (+1)")
               if modify_subversion('versions/openssl-buildenv.txt', reset=False):
@@ -124,17 +122,13 @@ jobs:
               if modify_subversion('versions/openssl-quic-buildenv.txt', reset=False):
                   changed = True
 
-          # SICHERHEITS-CHECK: Wenn keine Datei modifiziert wurde
           if not changed:
-              # Haben wir einen PR vorliegen, der eigentlich eine Änderung hätte triggern müssen?
               expected_change = unbound_changed or openssl_changed or openssl_quic_changed or any(l in labels for l in ['bump-openssl-subversion', 'bump-quic-subversion'])
               
               if expected_change:
-                  # Ein Versions-PR liegt vor, aber das Skript konnte nichts ändern -> Hart fehlschlagen lassen!
                   print("::error::Expected to bump subversion for a relevant file or label, but no changes were made. Failing pipeline.")
                   sys.exit(1)
               else:
-                  # Es ist ein unbeteiligter PR (z.B. Dokumentation / Renovate JSON) -> Sauber durchlassen, aber nichts committen
                   print("PR does not affect Unbound or OpenSSL versions. Skipping commit step.")
                   with open(os.environ['GITHUB_ENV'], 'a') as f:
                       f.write("HAS_CHANGES=false\n")
@@ -143,6 +137,9 @@ jobs:
           with open(os.environ['GITHUB_ENV'], 'a') as f:
               f.write("HAS_CHANGES=true\n")
         shell: python
+
+      - name: Export PR branch
+        run: echo "PR_BRANCH=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_ENV"
 
       - name: Commit and Push Changes
         if: env.HAS_CHANGES == 'true'
@@ -161,5 +158,5 @@ jobs:
             echo "No real differences to commit."
           else
             git commit -m "fix: auto-manage unbound subversion"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+            git push origin HEAD:$PR_BRANCH
           fi
