@@ -20,6 +20,8 @@
   "automergeStrategy": "merge-commit",
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
+  "gitNoCommits": false,
+  "rebaseWhen": "behind-base-branch",
 
   "customManagers": [
     {
@@ -42,7 +44,7 @@
         "(^|/)versions/openssl-buildenv\\.txt$"
       ],
       "matchStrings": [
-        "OPENSSL_BUILDENV_VERSION=(?<currentValue>[0-9A-Za-z._-]+)"
+        "(?:OPENSSL_BUILDENV_VERSION=|openssl=)(?<currentValue>[0-9A-Za-z._-]+)"
       ],
       "datasourceTemplate": "github-releases",
       "packageNameTemplate": "madnuttah/openssl-buildenv",
@@ -56,7 +58,7 @@
         "(^|/)versions/openssl-quic-buildenv\\.txt$"
       ],
       "matchStrings": [
-        "OPENSSL_QUIC_BUILDENV_VERSION=(?<currentValue>[0-9A-Za-z._-]+)"
+        "(?:OPENSSL_QUIC_BUILDENV_VERSION=|openssl=)(?<currentValue>[0-9A-Za-z._-]+)"
       ],
       "datasourceTemplate": "github-releases",
       "packageNameTemplate": "madnuttah/openssl-buildenv",
@@ -84,12 +86,14 @@
     {
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["versions/openssl-buildenv.txt"],
-      "allowedVersions": "!/-quic$/"
+      "allowedVersions": "!/-quic$/",
+      "labels": ["bump-openssl-subversion"]
     },
     {
       "matchManagers": ["custom.regex"],
       "matchFileNames": ["versions/openssl-quic-buildenv.txt"],
-      "allowedVersions": "/-quic$/"
+      "allowedVersions": "/-quic$/",
+      "labels": ["bump-quic-subversion"]
     }
   ]
 }

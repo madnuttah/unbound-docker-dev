@@ -10,7 +10,7 @@ on:
 permissions:
   actions: read
   checks: write
-  contents: read
+  contents: write
 
 jobs:
   tag_and_release:
@@ -28,13 +28,37 @@ jobs:
         with:
           persist-credentials: false
           
+      - name: Resolve Root Build Workflow Run ID
+        id: resolve_id
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          
+          # Fetch the grandparent run ID (the original build) to safely source the workflow artifacts
+          MANIFEST_RUN_ID="${{ github.event.workflow_run.id }}"
+          PREVIOUS_URL=$(gh api repos/${{ github.repository }}/actions/runs/$MANIFEST_RUN_ID --jq '.previous_attempt_url // empty')
+          
+          if [ -n "$PREVIOUS_URL" ]; then
+            BUILD_RUN_ID=$(echo "$PREVIOUS_URL" | grep -oE '[0-9]+$' | tail -1)
+          else
+            echo "Using fallback search via API..."
+            BUILD_RUN_ID=$(gh run list --workflow="CD Build Unbound Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
+            if [ -z "$BUILD_RUN_ID" ] || [ "$BUILD_RUN_ID" = "null" ]; then
+              BUILD_RUN_ID=$(gh run list --workflow="CD Build Unbound QUIC Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
+            fi
+          fi
+          
+          echo "Resolved Root Build Run ID: $BUILD_RUN_ID"
+          echo "BUILD_RUN_ID=$BUILD_RUN_ID" >> "$GITHUB_OUTPUT"
+
       # Ersetzt den alten "Download architecture variants" Schritt
       - name: Download metadata artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: unbound-build-metadata
           path: metadata
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.resolve_id.outputs.BUILD_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Ersetzt die alte Ordner-Suche durch das direkte Auslesen der variant.txt
@@ -47,6 +71,14 @@ jobs:
           
           VARIANT="$(cat metadata/variant.txt)"
           echo "VARIANT=$VARIANT" >> "$GITHUB_ENV"
+
+      - name: Verify Tag and Release eligibility
+        run: |
+          # If the run originates from a canary build, intercept and terminate successfully as no tag is needed
+          if [[ "$VARIANT" == canary* ]]; then
+            echo "Canary variant detected ($VARIANT). Skipping tagging and release creations."
+            exit 0
+          fi
 
       - name: Import GPG key
         id: IMPORT_GPG

@@ -29,12 +29,44 @@ jobs:
         with:
           egress-policy: audit
 
+      - name: Resolve Root Build Workflow Run ID
+        id: resolve_id
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          
+          # Step backward through the workflow chain to locate the original build job run ID
+          TESTDRIVE_RUN_ID="${{ github.event.workflow_run.id }}"
+          PREVIOUS_URL=$(gh api repos/${{ github.repository }}/actions/runs/$TESTDRIVE_RUN_ID --jq '.previous_attempt_url // empty')
+          
+          if [ -n "$PREVIOUS_URL" ]; then
+            BUILD_RUN_ID=$(echo "$PREVIOUS_URL" | grep -oE '[0-9]+$' | tail -1)
+          else
+            echo "Using fallback search via API..."
+            # Scan across the 4 possible trigger builds to locate the latest active success id
+            BUILD_RUN_ID=$(gh run list --workflow="CD Build Unbound Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
+            if [ -z "$BUILD_RUN_ID" ] || [ "$BUILD_RUN_ID" = "null" ]; then
+              BUILD_RUN_ID=$(gh run list --workflow="CD Build Unbound QUIC Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
+            fi
+            if [ -z "$BUILD_RUN_ID" ] || [ "$BUILD_RUN_ID" = "null" ]; then
+              BUILD_RUN_ID=$(gh run list --workflow="CD Build Canary Unbound Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
+            fi
+            if [ -z "$BUILD_RUN_ID" ] || [ "$BUILD_RUN_ID" = "null" ]; then
+              BUILD_RUN_ID=$(gh run list --workflow="CD Build Canary Unbound QUIC Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
+            fi
+          fi
+          
+          echo "Resolved Root Build Run ID: $BUILD_RUN_ID"
+          echo "BUILD_RUN_ID=$BUILD_RUN_ID" >> "$GITHUB_OUTPUT"
+
       - name: Download metadata artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: unbound-build-metadata
           path: metadata
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ steps.resolve_id.outputs.BUILD_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }} # Required authorization token for cross-workflow operations in v4
 
       - name: Ensure metadata exists
         run: |
