@@ -137,13 +137,6 @@ jobs:
             IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
             OPENSSL_QUIC_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_QUIC_BUILDENV_VERSION }}
             UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}
-
-          cache-from: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-quic-${{ matrix.arch }}
-
-          cache-to: |
-            type=registry,ref=${{ env.DOCKERHUB_SLUG }}:buildcache-canary-quic-${{ matrix.arch }},mode=max
-
           tags: |
             ${{ env.DOCKERHUB_SLUG }}:canary-quic-${{ matrix.arch }}
 
