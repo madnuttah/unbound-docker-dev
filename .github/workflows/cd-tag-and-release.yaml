@@ -193,7 +193,7 @@ jobs:
           fi
 
           RELEASE_NOTE=$(printf "## %s <madnuttah-bot>\n\n## What's new?\n%s\n\n%sNLnet Labs Unbound changelog: https://github.com\n" \
-            "$(date '+%Y-%m-%d')" "$WHATS_NEW" "$NEW_CONTRIB_SECTION" "$UNBOUND_VERSION")
+            "$(date '+%Y-%m-%d')" "$WHATS_NEW" "$NEW_CONTRIB_SECTION")
 
           git checkout -b "${UNBOUND_DOCKER_VERSION}" "${RELEASE_TAG}"
           git push --set-upstream origin "${UNBOUND_DOCKER_VERSION}"
