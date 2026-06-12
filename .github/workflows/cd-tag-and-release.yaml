@@ -28,57 +28,12 @@ jobs:
         with:
           persist-credentials: false
           
-      - name: Resolve Root Build Workflow Run ID
-        id: resolve_id
-        env:
-          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-          TARGET_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-
-          MANIFEST_RUN_ID="${{ github.event.workflow_run.id }}"
-          PREVIOUS_URL=$(gh api "repos/$TARGET_REPO/actions/runs/$MANIFEST_RUN_ID" --jq '.previous_attempt_url // empty')
-          
-          BUILD_RUN_ID=""
-          
-          if [ -n "$PREVIOUS_URL" ]; then
-            BUILD_RUN_ID=$(echo "$PREVIOUS_URL" | grep -oE '[0-9]+$' | tail -1)
-          else
-            echo "Using fallback search via API..."
-            
-            WORKFLOWS=(
-              "CD Build Unbound Docker Image"
-              "CD Build Unbound QUIC Docker Image"
-            )
-            
-            for wf in "${WORKFLOWS[@]}"; do
-              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
-              
-              if [ "$ID" = "null" ] || [ -z "$ID" ]; then
-                ID=""
-              fi
-              
-              if [ -n "$ID" ]; then
-                BUILD_RUN_ID="$ID"
-                break
-              fi
-            done
-          fi
-          
-          if [ -z "$BUILD_RUN_ID" ]; then
-            echo "Error: Could not resolve root build run ID." >&2
-            exit 1
-          fi
-          
-          echo "Resolved Root Build Run ID: $BUILD_RUN_ID"
-          echo "BUILD_RUN_ID=$BUILD_RUN_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Download metadata artifact
+      - name: Download metadata artifact natively
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: unbound-build-metadata
           path: metadata
-          run-id: ${{ steps.resolve_id.outputs.BUILD_RUN_ID }}
+          run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
 
       - name: Detect variant
@@ -129,6 +84,7 @@ jobs:
           GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
         run: |
           set -euo pipefail
+
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}"
 
           case "$VARIANT" in
@@ -178,6 +134,7 @@ jobs:
             fi
           done)
 
+          NEW_CONTRIB_SECTION=""
           if [ -n "$NEW_CONTRIB" ]; then
             NEW_CONTRIB_MD=$(echo "$NEW_CONTRIB" | while IFS='|' read -r NAME EMAIL; do
               USER=$(curl -s "https://github.com" | jq -r '.items[0].login // empty')
@@ -188,10 +145,8 @@ jobs:
               fi
             done)
             NEW_CONTRIB_SECTION=$(printf "## New contributors\n%s\n\n" "$NEW_CONTRIB_MD")
-          else
-            NEW_CONTRIB_SECTION=""
           fi
-
+          
           RELEASE_NOTE=$(printf "## %s <madnuttah-bot>\n\n## What's new?\n%s\n\n%sNLnet Labs Unbound changelog: https://github.com\n" \
             "$(date '+%Y-%m-%d')" "$WHATS_NEW" "$NEW_CONTRIB_SECTION")
 

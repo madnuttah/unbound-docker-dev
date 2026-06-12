@@ -102,3 +102,17 @@ jobs:
       - name: Cleanup
         if: always()
         run: docker rm -f unbound-dns || true
+
+      - name: Re-upload metadata for Publish Workflow
+        run: |
+          set -euo pipefail
+          mkdir -p metadata-payload
+          printf "%s" "$VARIANT" > metadata-payload/variant.txt
+          printf "%s" "$IMAGE_TAG" > metadata-payload/version.txt
+
+      - name: Upload metadata artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unbound-build-metadata
+          path: metadata-payload/
+          retention-days: 1
