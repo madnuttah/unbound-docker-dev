@@ -20,7 +20,6 @@
   "automergeStrategy": "merge-commit",
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
-  "gitNoCommits": false,
   "rebaseWhen": "behind-base-branch",
 
   "customManagers": [
