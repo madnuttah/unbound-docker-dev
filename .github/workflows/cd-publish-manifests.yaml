@@ -32,7 +32,7 @@ jobs:
       - name: Resolve Root Build Workflow Run ID
         id: resolve_id
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -55,7 +55,12 @@ jobs:
             )
             
             for wf in "${WORKFLOWS[@]}"; do
-              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '..databaseId // empty')
+              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '..databaseId')
+              
+              if [ "$ID" = "null" ] || [ -z "$ID" ]; then
+                ID=""
+              fi
+              
               if [ -n "$ID" ]; then
                 BUILD_RUN_ID="$ID"
                 break
@@ -77,7 +82,7 @@ jobs:
           name: unbound-build-metadata
           path: metadata
           run-id: ${{ steps.resolve_id.outputs.BUILD_RUN_ID }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
 
       - name: Ensure metadata exists
         run: |

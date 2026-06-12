@@ -31,7 +31,7 @@ jobs:
       - name: Resolve Root Build Workflow Run ID
         id: resolve_id
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -52,7 +52,12 @@ jobs:
             )
             
             for wf in "${WORKFLOWS[@]}"; do
-              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '..databaseId // empty')
+              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
+              
+              if [ "$ID" = "null" ] || [ -z "$ID" ]; then
+                ID=""
+              fi
+              
               if [ -n "$ID" ]; then
                 BUILD_RUN_ID="$ID"
                 break
@@ -74,7 +79,7 @@ jobs:
           name: unbound-build-metadata
           path: metadata
           run-id: ${{ steps.resolve_id.outputs.BUILD_RUN_ID }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
 
       - name: Detect variant
         id: detect
@@ -124,7 +129,7 @@ jobs:
           GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
         run: |
           set -euo pipefail
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@://github.com{GITHUB_REPOSITORY}"
 
           case "$VARIANT" in
             stable)
@@ -188,7 +193,7 @@ jobs:
           fi
 
           RELEASE_NOTE=$(printf "## %s <madnuttah-bot>\n\n## What's new?\n%s\n\n%sNLnet Labs Unbound changelog: https://github.com\n" \
-            "$(date '+%Y-%m-%d')" "$WHATS_NEW" "$NEW_CONTRIB_SECTION")
+            "$(date '+%Y-%m-%d')" "$WHATS_NEW" "$NEW_CONTRIB_SECTION" "$UNBOUND_VERSION")
 
           git checkout -b "${UNBOUND_DOCKER_VERSION}" "${RELEASE_TAG}"
           git push --set-upstream origin "${UNBOUND_DOCKER_VERSION}"
