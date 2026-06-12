@@ -198,4 +198,4 @@ jobs:
           git checkout -b "${UNBOUND_DOCKER_VERSION}" "${RELEASE_TAG}"
           git push --set-upstream origin "${UNBOUND_DOCKER_VERSION}"
 
-          gh release create "${RELEASE_TAG}" -t "${UNBOUND
+          gh release create "${RELEASE_TAG}" -t "${UNBOUND_DOCKER_VERSION}" -n "${RELEASE_NOTE}" --latest
