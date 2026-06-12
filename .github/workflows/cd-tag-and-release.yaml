@@ -15,7 +15,7 @@ permissions:
 jobs:
   tag_and_release:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' 
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
       - name: Harden Runner
@@ -32,27 +32,43 @@ jobs:
         id: resolve_id
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           
           # Fetch the grandparent run ID (the original build) to safely source the workflow artifacts
           MANIFEST_RUN_ID="${{ github.event.workflow_run.id }}"
-          PREVIOUS_URL=$(gh api repos/${{ github.repository }}/actions/runs/$MANIFEST_RUN_ID --jq '.previous_attempt_url // empty')
+          PREVIOUS_URL=$(gh api repos/$TARGET_REPO/actions/runs/$MANIFEST_RUN_ID --jq '.previous_attempt_url // empty')
+          
+          BUILD_RUN_ID=""
           
           if [ -n "$PREVIOUS_URL" ]; then
             BUILD_RUN_ID=$(echo "$PREVIOUS_URL" | grep -oE '[0-9]+$' | tail -1)
           else
             echo "Using fallback search via API..."
-            BUILD_RUN_ID=$(gh run list --workflow="CD Build Unbound Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
-            if [ -z "$BUILD_RUN_ID" ] || [ "$BUILD_RUN_ID" = "null" ]; then
-              BUILD_RUN_ID=$(gh run list --workflow="CD Build Unbound QUIC Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
-            fi
+            
+            WORKFLOWS=(
+              "CD Build Unbound Docker Image"
+              "CD Build Unbound QUIC Docker Image"
+            )
+            
+            for wf in "${WORKFLOWS[@]}"; do
+              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '..databaseId // empty')
+              if [ -n "$ID" ]; then
+                BUILD_RUN_ID="$ID"
+                break
+              fi
+            done
+          fi
+          
+          if [ -z "$BUILD_RUN_ID" ]; then
+            echo "Error: Could not resolve root build run ID." >&2
+            exit 1
           fi
           
           echo "Resolved Root Build Run ID: $BUILD_RUN_ID"
           echo "BUILD_RUN_ID=$BUILD_RUN_ID" >> "$GITHUB_OUTPUT"
 
-      # Ersetzt den alten "Download architecture variants" Schritt
       - name: Download metadata artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
@@ -61,8 +77,8 @@ jobs:
           run-id: ${{ steps.resolve_id.outputs.BUILD_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Ersetzt die alte Ordner-Suche durch das direkte Auslesen der variant.txt
       - name: Detect variant
+        id: detect
         run: |
           if [ ! -f metadata/variant.txt ]; then
             echo "No metadata artifact found for this workflow run."
@@ -71,16 +87,20 @@ jobs:
           
           VARIANT="$(cat metadata/variant.txt)"
           echo "VARIANT=$VARIANT" >> "$GITHUB_ENV"
-
-      - name: Verify Tag and Release eligibility
-        run: |
-          # If the run originates from a canary build, intercept and terminate successfully as no tag is needed
+          
           if [[ "$VARIANT" == canary* ]]; then
-            echo "Canary variant detected ($VARIANT). Skipping tagging and release creations."
-            exit 0
+            echo "IS_CANARY=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "IS_CANARY=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Verify Tag and Release eligibility
+        if: ${{ steps.detect.outputs.IS_CANARY == 'true' }}
+        run: |
+          echo "Canary variant detected. Skipping tagging and release creations."
+
       - name: Import GPG key
+        if: ${{ steps.detect.outputs.IS_CANARY != 'true' }}
         id: IMPORT_GPG
         uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd
         with:
@@ -96,15 +116,16 @@ jobs:
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
 
       - name: Push tag and upload release to GitHub
+        if: ${{ steps.detect.outputs.IS_CANARY != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           GIT_AUTHOR_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
           GIT_AUTHOR_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
           GIT_COMMITTER_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
-          GIT_COMMITTER_EMAIL: ${{ secrets.BOT_GPG_PASSPHRASE }} # Note: Hier stand in deinem Skript zuvor EMAIL, ich lasse es laut deiner Anweisung unberührt falls beabsichtigt.
+          GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
         run: |
           set -euo pipefail
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@://github.com{{ github.repository }}"
 
           case "$VARIANT" in
             stable)
@@ -115,13 +136,9 @@ jobs:
               UNBOUND_VERSION="$(cat versions/unbound-quic.txt)"
               UNBOUND_DOCKER_VERSION="$(cat versions/unbound-quic-docker-image.txt)"
               ;;
-            canary)
-              UNBOUND_VERSION="$(cat versions/unbound.txt)"
-              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image.txt)"
-              ;;
-            canary-quic)
-              UNBOUND_VERSION="$(cat versions/unbound-quic.txt)"
-              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-quic-docker-image.txt)"
+            *)
+              echo "Unknown or unhandled variant for release: $VARIANT" >&2
+              exit 1
               ;;
           esac
 
@@ -159,7 +176,7 @@ jobs:
 
           if [ -n "$NEW_CONTRIB" ]; then
             NEW_CONTRIB_MD=$(echo "$NEW_CONTRIB" | while IFS='|' read -r NAME EMAIL; do
-              USER=$(curl -s "https://api.github.com/search/users?q=$EMAIL" | jq -r '.items[0].login // empty')
+              USER=$(curl -s "https://github.com" | jq -r '.items[0].login // empty')
               if [ -n "$USER" ]; then
                 echo "- @$USER"
               else
@@ -171,11 +188,10 @@ jobs:
             NEW_CONTRIB_SECTION=""
           fi
 
-          RELEASE_NOTE=$(printf "## %s <madnuttah-bot>\n\n## What's new?\n%s\n\n%sNLnet Labs Unbound changelog: https://github.com/NLnetLabs/unbound/releases/tag/release-%s\n" \
+          RELEASE_NOTE=$(printf "## %s <madnuttah-bot>\n\n## What's new?\n%s\n\n%sNLnet Labs Unbound changelog: https://github.com\n" \
             "$(date '+%Y-%m-%d')" "$WHATS_NEW" "$NEW_CONTRIB_SECTION" "$UNBOUND_VERSION")
 
           git checkout -b "${UNBOUND_DOCKER_VERSION}" "${RELEASE_TAG}"
           git push --set-upstream origin "${UNBOUND_DOCKER_VERSION}"
 
           gh release create "${RELEASE_TAG}" -t "${UNBOUND_DOCKER_VERSION}" -n "${RELEASE_NOTE}" --latest
-          exit 0

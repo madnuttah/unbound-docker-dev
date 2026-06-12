@@ -33,28 +33,40 @@ jobs:
         id: resolve_id
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           
           # Step backward through the workflow chain to locate the original build job run ID
           TESTDRIVE_RUN_ID="${{ github.event.workflow_run.id }}"
-          PREVIOUS_URL=$(gh api repos/${{ github.repository }}/actions/runs/$TESTDRIVE_RUN_ID --jq '.previous_attempt_url // empty')
+          PREVIOUS_URL=$(gh api repos/$TARGET_REPO/actions/runs/$TESTDRIVE_RUN_ID --jq '.previous_attempt_url // empty')
+          
+          BUILD_RUN_ID=""
           
           if [ -n "$PREVIOUS_URL" ]; then
             BUILD_RUN_ID=$(echo "$PREVIOUS_URL" | grep -oE '[0-9]+$' | tail -1)
           else
             echo "Using fallback search via API..."
-            # Scan across the 4 possible trigger builds to locate the latest active success id
-            BUILD_RUN_ID=$(gh run list --workflow="CD Build Unbound Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
-            if [ -z "$BUILD_RUN_ID" ] || [ "$BUILD_RUN_ID" = "null" ]; then
-              BUILD_RUN_ID=$(gh run list --workflow="CD Build Unbound QUIC Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
-            fi
-            if [ -z "$BUILD_RUN_ID" ] || [ "$BUILD_RUN_ID" = "null" ]; then
-              BUILD_RUN_ID=$(gh run list --workflow="CD Build Canary Unbound Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
-            fi
-            if [ -z "$BUILD_RUN_ID" ] || [ "$BUILD_RUN_ID" = "null" ]; then
-              BUILD_RUN_ID=$(gh run list --workflow="CD Build Canary Unbound QUIC Docker Image" --status=success --limit=1 --json databaseId --jq '..databaseId')
-            fi
+            
+            WORKFLOWS=(
+              "CD Build Unbound Docker Image"
+              "CD Build Unbound QUIC Docker Image"
+              "CD Build Canary Unbound Docker Image"
+              "CD Build Canary Unbound QUIC Docker Image"
+            )
+            
+            for wf in "${WORKFLOWS[@]}"; do
+              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '..databaseId // empty')
+              if [ -n "$ID" ]; then
+                BUILD_RUN_ID="$ID"
+                break
+              fi
+            done
+          fi
+          
+          if [ -z "$BUILD_RUN_ID" ]; then
+            echo "Error: Could not resolve root build run ID." >&2
+            exit 1
           fi
           
           echo "Resolved Root Build Run ID: $BUILD_RUN_ID"
@@ -66,7 +78,7 @@ jobs:
           name: unbound-build-metadata
           path: metadata
           run-id: ${{ steps.resolve_id.outputs.BUILD_RUN_ID }}
-          github-token: ${{ secrets.GITHUB_TOKEN }} # Required authorization token for cross-workflow operations in v4
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Ensure metadata exists
         run: |
@@ -81,9 +93,14 @@ jobs:
           echo "VARIANT=$(cat metadata/variant.txt)" >> "$GITHUB_ENV"
           echo "VERSION=$(cat metadata/version.txt)" >> "$GITHUB_ENV"
 
-      - uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3
-      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5
-      - uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5
+        
+      - name: Log in to Docker Hub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -91,10 +108,11 @@ jobs:
       - name: Create manifest
         id: manifest
         shell: bash
+        env:
+          DOCKERHUB_SLUG: ${{ env.DOCKERHUB_SLUG }}
         run: |
           set -euo pipefail
           
-          # Wir nutzen --metadata-file, um den exakten Digest des erzeugten Manifest-Index abzufangen
           METADATA_FILE="manifest-metadata.json"
 
           case "$VARIANT" in
@@ -161,7 +179,7 @@ jobs:
           echo "DIGEST=$MANIFEST_DIGEST" >> "$GITHUB_OUTPUT"
 
       - name: Generate SLSA Build Provenance
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26
         continue-on-error: true
         with:
           subject-name: index.docker.io/${{ env.DOCKERHUB_SLUG }}
