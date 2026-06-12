@@ -37,9 +37,8 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Step backward through the workflow chain to locate the original build job run ID
           TESTDRIVE_RUN_ID="${{ github.event.workflow_run.id }}"
-          PREVIOUS_URL=$(gh api repos/$TARGET_REPO/actions/runs/$TESTDRIVE_RUN_ID --jq '.previous_attempt_url // empty')
+          PREVIOUS_URL=$(gh api "repos/$TARGET_REPO/actions/runs/$TESTDRIVE_RUN_ID" --jq '.previous_attempt_url // empty')
           
           BUILD_RUN_ID=""
           
