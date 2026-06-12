@@ -61,6 +61,30 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      - name: Wait for Docker Hub tag availability
+        env:
+          DOCKERHUB_SLUG: ${{ env.DOCKERHUB_SLUG }}
+        run: |
+          for TAG in \
+            "${DOCKERHUB_SLUG}:${VERSION}-amd64" \
+            "${DOCKERHUB_SLUG}:${VERSION}-arm64" \
+            "${DOCKERHUB_SLUG}:${VERSION}-386" \
+            "${DOCKERHUB_SLUG}:${VERSION}-armv6" \
+            "${DOCKERHUB_SLUG}:${VERSION}-armv7" \
+            "${DOCKERHUB_SLUG}:${VERSION}-ppc64le" \
+            "${DOCKERHUB_SLUG}:${VERSION}-s390x" \
+            "${DOCKERHUB_SLUG}:${VERSION}-riscv64"
+          do
+            for i in {1..20}; do
+              if docker buildx imagetools inspect "$TAG" >/dev/null 2>&1; then
+                echo "Found $TAG"
+                break
+              fi
+              echo "Waiting for $TAG..."
+              sleep 3
+            done
+          done
 
       - name: Create manifest
         id: manifest
