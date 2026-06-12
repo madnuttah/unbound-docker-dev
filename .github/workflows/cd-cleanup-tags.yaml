@@ -1,8 +1,11 @@
 name: CD Cleanup Dockerhub Tags
 
 on:
-  schedule:
-    - cron: "0 0 * * mon-fri"
+  workflow_run:
+    workflows:
+      - "CD Tag And Release"
+    types:
+      - completed
   workflow_dispatch:
 
 env:
@@ -98,7 +101,7 @@ jobs:
           while [ -n "$page" ] && [ "$page" != "null" ]; do
             body=$(curl -s "$page")
             page=$(echo "$body" | jq -r '.next')
-            echo "$body" | jq -r '.results[].name' | while read -r tag; do
+            echo "$body" | jq -r '.results // [] | .[].name' | while read -r tag; do
               if should_delete "$tag"; then
                 delete_tag "$tag"
               else
