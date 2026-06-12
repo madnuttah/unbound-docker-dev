@@ -55,7 +55,9 @@ jobs:
             )
             
             for wf in "${WORKFLOWS[@]}"; do
-              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '..databaseId')
+              # Greift sicher auf das erste Element des Arrays zu. 
+              # Absolut kompatibel mit dem internen Go-Parser der CLI.
+              ID=$(gh run list --repo "$TARGET_REPO" --workflow="$wf" --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
               
               if [ "$ID" = "null" ] || [ -z "$ID" ]; then
                 ID=""

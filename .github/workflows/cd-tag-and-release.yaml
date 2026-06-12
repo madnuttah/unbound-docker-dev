@@ -129,7 +129,7 @@ jobs:
           GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
         run: |
           set -euo pipefail
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@://github.com{GITHUB_REPOSITORY}"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}"
 
           case "$VARIANT" in
             stable)
@@ -198,4 +198,4 @@ jobs:
           git checkout -b "${UNBOUND_DOCKER_VERSION}" "${RELEASE_TAG}"
           git push --set-upstream origin "${UNBOUND_DOCKER_VERSION}"
 
-          gh release create "${RELEASE_TAG}" -t "${UNBOUND_DOCKER_VERSION}" -n "${RELEASE_NOTE}" --latest
+          gh release create "${RELEASE_TAG}" -t "${UNBOUND
