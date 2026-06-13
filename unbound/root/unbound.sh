@@ -1,56 +1,45 @@
 #!/bin/sh
 
-set -eu
+unbound_root=/usr/local/unbound
 
-unbound_root="/usr/local/unbound"
+bi_white='\033[1;97m'
+bi_blue='\033[1;94m'
+bi_red='\033[1;91m'
+bi_green='\033[1;92m'
+bi_yellow='\033[1;93m' 
+color_default='\033[0m'
 
-bi_white="$(printf '\033[1;97m')"
-bi_blue="$(printf '\033[1;94m')"
-bi_red="$(printf '\033[1;91m')"
-bi_green="$(printf '\033[1;92m')"
-bi_yellow="$(printf '\033[1;93m')"
-color_default="$(printf '\033[0m')"
+echo -e "╔═════════════════════════════════════════════════════╗
+║                                                     ║
+║                  ${bi_white}MΛDИVTTΛH Unbound${color_default}                  ║
+║                                                     ║
+║     https://github.com/madnuttah/unbound-docker     ║
+║     https://hub.docker.com/r/madnuttah/unbound      ║
+║                                                     ║
+╚═════════════════════════════════════════════════════╝
+"
 
-printf "╔═════════════════════════════════════════════════════╗\n"
-printf "║                                                     ║\n"
-printf "║                  %sMΛDИVTTΛH Unbound%s                  ║\n" "$bi_white" "$color_default"
-printf "║                                                     ║\n"
-printf "║     https://github.com/madnuttah/unbound-docker     ║\n"
-printf "║     https://hub.docker.com/r/madnuttah/unbound      ║\n"
-printf "║                                                     ║\n"
-printf "╚═════════════════════════════════════════════════════╝\n\n"
-
-disable_set_perms="${1:-false}"
-
-if [ "$disable_set_perms" = "true" ]; then
-    user_color="$bi_green"
-    group_color="$bi_green"
-
-    # UID check
-    if [ "$(id -u)" = "0" ]; then
-        user_color="$bi_red"
-    fi
-
-    # GID check
-    if [ "$(id -g)" = "0" ]; then
-        group_color="$bi_red"
-    fi
-
-    printf "User: %s%s%s\n" "$user_color" "$(id -un)" "$color_default"
-    printf "Group: %s%s%s\n\n" "$group_color" "$(id -gn)" "$color_default"
-
+disable_set_perms=${1:-false}
+if $disable_set_perms; then
+  user_color=$bi_green
+  group_color=$bi_green
+  if [ $(id -u) -eq 0 ]; then
+    user_color=$bi_red
+  fi
+  if [ $(id -g) -eq 0 ]; then
+    group_color=$bi_red
+  fi
+  echo -e "User: $user_color$(id -un)${color_default}
+Group: $group_color$(id -gn)${color_default}
+"
 else
-    uid="$(id -u _unbound 2>/dev/null || printf 'unknown')"
-    gid="$(id -g _unbound 2>/dev/null || printf 'unknown')"
-
-    printf "UNBOUND_UID: %s%s%s\n" "$bi_blue" "$uid" "$color_default"
-    printf "UNBOUND_GID: %s%s%s\n\n" "$bi_blue" "$gid" "$color_default"
+  echo -e "UNBOUND_UID: ${bi_blue}$(id -u _unbound)${color_default}
+UNBOUND_GID: ${bi_blue}$(id -g _unbound)${color_default}
+"
 fi
 
-printf "DISABLE_SET_PERMS: %s%s%s\n\n" "$bi_yellow" "$disable_set_perms" "$color_default"
+echo -e "DISABLE_SET_PERMS: ${bi_yellow}$disable_set_perms${color_default}
+"
 
-# Anchor root key
-"$unbound_root/unbound.d/sbin/unbound-anchor" -a "$unbound_root/iana.d/root.key"
-
-# Exec unbound
-exec "$unbound_root/unbound.d/sbin/unbound" -d -c "$unbound_root/unbound.conf"
+$unbound_root/unbound.d/sbin/unbound-anchor -a $unbound_root/iana.d/root.key
+exec $unbound_root/unbound.d/sbin/unbound -d -c $unbound_root/unbound.conf
