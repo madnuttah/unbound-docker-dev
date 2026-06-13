@@ -103,12 +103,10 @@ jobs:
 
           case "$VARIANT" in
             stable)
-              UNBOUND_VERSION="$(cat versions/unbound.txt)"
               UNBOUND_DOCKER_VERSION="$(sed 's/^unbound=//' versions/unbound-docker-image.txt)"
               RELEASE_TAG="v${UNBOUND_DOCKER_VERSION}"
               ;;
             stable-quic)
-              UNBOUND_VERSION="$(cat versions/unbound.txt)"
               UNBOUND_DOCKER_VERSION="$(sed 's/^unbound=//' versions/unbound-docker-image.txt)"
               RELEASE_TAG="v${UNBOUND_DOCKER_VERSION}-quic"
               ;;
