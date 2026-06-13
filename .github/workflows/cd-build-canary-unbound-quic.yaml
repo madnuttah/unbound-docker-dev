@@ -3,6 +3,8 @@ name: CD Build Canary Unbound QUIC Docker Image
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - "versions/unbound-git-sha.txt"
 
