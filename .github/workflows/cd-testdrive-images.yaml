@@ -108,7 +108,7 @@ jobs:
           set -euo pipefail
           mkdir -p metadata-payload
           printf "%s" "$VARIANT" > metadata-payload/variant.txt
-          printf "%s" "$IMAGE_TAG" > metadata-payload/version.txt
+          printf "%s" "$VERSION" > metadata-payload/version.txt
 
       - name: Upload metadata artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
