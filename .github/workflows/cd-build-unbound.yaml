@@ -59,7 +59,11 @@ jobs:
 
           OPENSSL_BUILDENV_VERSION="$(grep '^OPENSSL_BUILDENV_VERSION=' versions/openssl-buildenv.txt | cut -d= -f2)"
 
-          UNBOUND_SUB="$(grep -oP '(?<=unbound=\d+\.\d+\.\d+-)\d+' versions/unbound-docker-image.txt)"
+          UNBOUND_SUB="$(
+            sed -n 's/^unbound=[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}-\([0-9]\+\)$/\1/p' \
+              versions/unbound-docker-image.txt
+          )"
+
           UNBOUND_IMAGE_VERSION="${UNBOUND_VERSION}-${UNBOUND_SUB}"
 
           {
