@@ -32,9 +32,13 @@ jobs:
       UNBOUND_IMAGE_VERSION: "${{ steps.vars.outputs.UNBOUND_IMAGE_VERSION }}"
 
     steps:
-      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5
+      - name: Harden Runner
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            nlnetlabs.nl:443
 
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
@@ -113,9 +117,21 @@ jobs:
       DOCKERHUB_SLUG: "madnuttah/unbound-dev"
 
     steps:
-      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5
+      - name: Harden Runner
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            auth.docker.io:443
+            dl-cdn.alpinelinux.org:443
+            github.com:443
+            keyserver.ubuntu.com:443
+            pgp.surf.nl:443
+            nlnetlabs.nl:443
+            production.cloudfront.docker.com:443
+            registry-1.docker.io:443
+            www.internic.net:443
+            www.nlnetlabs.nl:443
 
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
@@ -167,6 +183,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
+        with:
+          egress-policy: block
+          allowed-endpoints: >+
+          
       - name: Create Isolated Metadata
         run: |
           mkdir -p metadata-payload

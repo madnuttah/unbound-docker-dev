@@ -22,9 +22,13 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@f808768d1510423e83855289c910610ca9b43176
+        uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
         with:
-          egress-policy: audit
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            auth.docker.io:443
+            registry-1.docker.io:443
 
       - name: Download metadata artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8

@@ -16,6 +16,12 @@ jobs:
         # with:
           # persist-credentials: false
           # token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Harden Runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
