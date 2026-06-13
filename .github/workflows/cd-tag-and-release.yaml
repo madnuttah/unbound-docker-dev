@@ -93,9 +93,10 @@ jobs:
               UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image.txt)"
               ;;
             stable-quic)
-              UNBOUND_VERSION="$(cat versions/unbound-quic.txt)"
-              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-quic-docker-image.txt)"
+              UNBOUND_VERSION="$(cat versions/unbound.txt)"
+              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image.txt)"
               ;;
+
             *)
               echo "Unknown or unhandled variant for release: $VARIANT" >&2
               exit 1
