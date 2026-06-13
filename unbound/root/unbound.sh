@@ -40,8 +40,8 @@ if [ "$disable_set_perms" = "true" ]; then
     printf "Group: %s%s%s\n\n" "$group_color" "$(id -gn)" "$color_default"
 
 else
-    uid=$(id -u _unbound 2>/dev/null) || uid="unknown"
-    gid=$(id -g _unbound 2>/dev/null) || gid="unknown"
+    uid="$(id -u _unbound 2>/dev/null || printf 'unknown')"
+    gid="$(id -g _unbound 2>/dev/null || printf 'unknown')"
 
     printf "UNBOUND_UID: %s%s%s\n" "$bi_blue" "$uid" "$color_default"
     printf "UNBOUND_GID: %s%s%s\n\n" "$bi_blue" "$gid" "$color_default"
