@@ -35,6 +35,21 @@ jobs:
           path: metadata
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          
+      - name: Show metadata used for this run
+        run: |
+          echo "=== METADATA DEBUG ==="
+          echo "Triggered by workflow run: ${{ github.event.workflow_run.id }}"
+          echo "Upstream workflow name: ${{ github.event.workflow_run.name }}"
+          echo "Upstream workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo
+          echo "variant.txt:"
+          cat metadata/variant.txt || echo "(missing)"
+          echo
+          echo "version.txt:"
+          cat metadata/version.txt || echo "(missing)"
+          echo "======================"
+
 
       - name: Detect variant
         id: detect
@@ -90,11 +105,11 @@ jobs:
           case "$VARIANT" in
             stable)
               UNBOUND_VERSION="$(cat versions/unbound.txt)"
-              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image.txt)"
+              UNBOUND_DOCKER_VERSION="$(sed 's/^unbound=//' versions/unbound-docker-image.txt)"
               ;;
             stable-quic)
               UNBOUND_VERSION="$(cat versions/unbound.txt)"
-              UNBOUND_DOCKER_VERSION="$(cat versions/unbound-docker-image.txt)"
+              UNBOUND_DOCKER_VERSION="$(sed 's/^unbound=//' versions/unbound-docker-image.txt)"
               ;;
 
             *)

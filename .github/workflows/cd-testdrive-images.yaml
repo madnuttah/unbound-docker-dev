@@ -40,6 +40,20 @@ jobs:
             echo "No metadata artifact found for this workflow run."
             exit 1
           fi
+          
+      - name: Show metadata used for this run
+        run: |
+          echo "=== METADATA DEBUG ==="
+          echo "Triggered by workflow run: ${{ github.event.workflow_run.id }}"
+          echo "Upstream workflow name: ${{ github.event.workflow_run.name }}"
+          echo "Upstream workflow conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo
+          echo "variant.txt:"
+          cat metadata/variant.txt || echo "(missing)"
+          echo
+          echo "version.txt:"
+          cat metadata/version.txt || echo "(missing)"
+          echo "======================"
 
       - name: Detect variant
         run: |
