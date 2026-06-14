@@ -92,7 +92,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
 
-      - name: Push tag and upload release to GitHub
+      - name: Push tag and upload/update release
         if: ${{ steps.detect.outputs.IS_CANARY != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
@@ -105,30 +105,27 @@ jobs:
 
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}"
 
+          VERSION="$(cat metadata/version.txt)"
+
           case "$VARIANT" in
             stable)
-              UNBOUND_DOCKER_VERSION="$(cat metadata/version.txt)"
-              RELEASE_TAG="v${UNBOUND_DOCKER_VERSION}"
+              RELEASE_TAG="v${VERSION}"
               ;;
             stable-quic)
-              UNBOUND_DOCKER_VERSION="$(cat metadata/version.txt)"
-              RELEASE_TAG="v${UNBOUND_DOCKER_VERSION}-quic"
+              RELEASE_TAG="v${VERSION}-quic"
               ;;
             *)
-              echo "Unknown or unhandled variant for release: $VARIANT" >&2
+              echo "Unknown or unhandled variant: $VARIANT" >&2
               exit 1
               ;;
           esac
 
           git fetch --tags --quiet
 
-          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-            echo "Tag ${RELEASE_TAG} already exists."
-            exit 1
+          if ! git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            git tag -a "${RELEASE_TAG}" -m "${RELEASE_TAG}"
+            git push origin "${RELEASE_TAG}"
           fi
-
-          git tag -a "${RELEASE_TAG}" -m "${RELEASE_TAG}"
-          git push origin "${RELEASE_TAG}"
 
           PREV_TAG="$(git tag --sort=-v:refname | grep -v "^${RELEASE_TAG}$" | head -n 1 || true)"
 
@@ -166,23 +163,31 @@ jobs:
 
           OPENSSL_CHANGELOG="https://github.com/openssl/openssl/releases/tag/openssl-${OPENSSL_VERSION}"
           OPENSSL_QUIC_CHANGELOG="https://github.com/openssl/openssl/releases/tag/openssl-${OPENSSL_QUIC_VERSION}"
-          UNBOUND_CHANGELOG="https://github.com/NLnetLabs/unbound/releases/tag/release-${UNBOUND_DOCKER_VERSION}"
+          UNBOUND_CHANGELOG="https://github.com/NLnetLabs/unbound/releases/tag/release-${VERSION}"
 
           if [[ "$VARIANT" == "stable" ]]; then
-            WHATS_NEW="$(printf '## Default build\n* OpenSSL buildenv: %s\n\nOpenSSL release notes: %s\nUnbound changelog: %s\n' \
+            NEW_NOTES="$(printf '## Default build\n* OpenSSL buildenv: %s\n\nOpenSSL release notes: %s\nUnbound changelog: %s\n\n' \
               "$OPENSSL_VERSION" "$OPENSSL_CHANGELOG" "$UNBOUND_CHANGELOG")"
           else
-            WHATS_NEW="$(printf '## QUIC build\n* OpenSSL QUIC buildenv: %s\n* nghttp3: %s\n* ngtcp2: %s\n\nOpenSSL QUIC release notes: %s\nUnbound changelog: %s\n' \
+            NEW_NOTES="$(printf '## QUIC build\n* OpenSSL QUIC buildenv: %s\n* nghttp3: %s\n* ngtcp2: %s\n\nOpenSSL QUIC release notes: %s\nUnbound changelog: %s\n\n' \
               "$OPENSSL_QUIC_VERSION" "$NGHTTP3_VERSION" "$NGTCP2_VERSION" "$OPENSSL_QUIC_CHANGELOG" "$UNBOUND_CHANGELOG")"
           fi
 
-          RELEASE_NOTE="$(printf '## %s <madnuttah-bot>\n\n%s\n%s' \
-            "$(date '+%Y-%m-%d')" "$WHATS_NEW" "$NEW_CONTRIB_SECTION")"
+          RELEASE_NAME="${VERSION}"
 
-          git checkout -b "${UNBOUND_DOCKER_VERSION}" "${RELEASE_TAG}"
-          git push --set-upstream origin "${UNBOUND_DOCKER_VERSION}"
+          EXISTING_RELEASE="$(gh release view "v${VERSION}" --json body --jq .body || true)"
 
-          gh release create "${RELEASE_TAG}" \
-            -t "${UNBOUND_DOCKER_VERSION}" \
-            -n "${RELEASE_NOTE}" \
-            --latest
+          if [[ "$VARIANT" == "stable" ]]; then
+            FINAL_NOTES="$(printf '## %s <madnuttah-bot>\n\n%s%s' \
+              "$(date '+%Y-%m-%d')" "$NEW_NOTES" "$NEW_CONTRIB_SECTION")"
+
+            gh release create "v${VERSION}" \
+              -t "${RELEASE_NAME}" \
+              -n "${FINAL_NOTES}" \
+              --latest
+          else
+            UPDATED_NOTES="$(printf '%s\n%s%s' "$EXISTING_RELEASE" "$NEW_NOTES" "$NEW_CONTRIB_SECTION")"
+
+            gh release edit "v${VERSION}" \
+              -n "${UPDATED_NOTES}"
+          fi
