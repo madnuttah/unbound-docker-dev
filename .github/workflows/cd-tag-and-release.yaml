@@ -19,7 +19,7 @@ jobs:
     
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -164,14 +164,19 @@ jobs:
           NGHTTP3_VERSION="$(curl -fsSL https://raw.githubusercontent.com/madnuttah/openssl-buildenv/refs/heads/main/versions/nghttp3.txt)"
           NGTCP2_VERSION="$(curl -fsSL https://raw.githubusercontent.com/madnuttah/openssl-buildenv/refs/heads/main/versions/ngtcp2.txt)"
 
-          DEFAULT_SECTION="$(printf '## Default build\n* OpenSSL buildenv: %s\n' "$OPENSSL_VERSION")"
+          OPENSSL_CHANGELOG="https://github.com/openssl/openssl/releases/tag/openssl-${OPENSSL_VERSION}"
+          OPENSSL_QUIC_CHANGELOG="https://github.com/openssl/openssl/releases/tag/openssl-${OPENSSL_QUIC_VERSION}"
+          UNBOUND_CHANGELOG="https://github.com/NLnetLabs/unbound/releases/tag/release-${UNBOUND_DOCKER_VERSION}"
 
-          QUIC_SECTION="$(printf '## QUIC build\n* OpenSSL QUIC buildenv: %s\n* nghttp3: %s\n* ngtcp2: %s\n' \
-            "$OPENSSL_QUIC_VERSION" "$NGHTTP3_VERSION" "$NGTCP2_VERSION")"
+          if [[ "$VARIANT" == "stable" ]]; then
+            WHATS_NEW="$(printf '## Default build\n* OpenSSL buildenv: %s\n\nOpenSSL release notes: %s\nUnbound changelog: %s\n' \
+              "$OPENSSL_VERSION" "$OPENSSL_CHANGELOG" "$UNBOUND_CHANGELOG")"
+          else
+            WHATS_NEW="$(printf '## QUIC build\n* OpenSSL QUIC buildenv: %s\n* nghttp3: %s\n* ngtcp2: %s\n\nOpenSSL QUIC release notes: %s\nUnbound changelog: %s\n' \
+              "$OPENSSL_QUIC_VERSION" "$NGHTTP3_VERSION" "$NGTCP2_VERSION" "$OPENSSL_QUIC_CHANGELOG" "$UNBOUND_CHANGELOG")"
+          fi
 
-          WHATS_NEW="$(printf '%s\n%s' "$DEFAULT_SECTION" "$QUIC_SECTION")"
-
-          RELEASE_NOTE="$(printf '## %s <madnuttah-bot>\n\n%s\n\n%sNLnet Labs Unbound changelog: https://github.com\n' \
+          RELEASE_NOTE="$(printf '## %s <madnuttah-bot>\n\n%s\n%s' \
             "$(date '+%Y-%m-%d')" "$WHATS_NEW" "$NEW_CONTRIB_SECTION")"
 
           git checkout -b "${UNBOUND_DOCKER_VERSION}" "${RELEASE_TAG}"
