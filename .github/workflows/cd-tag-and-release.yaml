@@ -159,7 +159,6 @@ jobs:
             NEW_CONTRIB_SECTION="$(printf '## New contributors\n%s\n\n' "$NEW_CONTRIB_MD")"
           fi
 
-          # FIXED: Fetch OpenSSL + QUIC versions from remote repo
           OPENSSL_VERSION="$(curl -fsSL https://raw.githubusercontent.com/madnuttah/openssl-buildenv/refs/heads/main/versions/openssl-buildenv.txt)"
           OPENSSL_QUIC_VERSION="$(curl -fsSL https://raw.githubusercontent.com/madnuttah/openssl-buildenv/refs/heads/main/versions/openssl-quic-buildenv.txt)"
           NGHTTP3_VERSION="$(curl -fsSL https://raw.githubusercontent.com/madnuttah/openssl-buildenv/refs/heads/main/versions/nghttp3.txt)"
